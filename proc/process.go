@@ -2,23 +2,40 @@ package proc
 
 import (
 	"coffer/log"
+	"io/ioutil"
 	"os"
 	"os/exec"
+	"strings"
 	"syscall"
 )
 
-func Run(tty bool, command string) { //run命令
-	newContainer := createContainerProcess(tty, command) //首先创建容器进程
-	if err := newContainer.Start(); err != nil {         //运行容器进程
+func Run(tty bool, cmdList []string) { //run命令, res *subsys.ResourceConfig
+	log.Logout("DEBUG", "Creating Container Process")
+	newContainer, writePipe := createContainerProcess(tty) //首先创建容器进程
+	if newContainer == nil {
+		log.Logout("ERROR", "Create new container error")
+		return
+	}
+	if err := newContainer.Start(); err != nil { //运行容器进程
 		log.Logout("ERROR", err.Error())
 	}
+	sendInitCommand(cmdList, writePipe) //初始化容器
 	newContainer.Wait()
-	os.Exit(-1)
 }
-func createContainerProcess(tty bool, command string) *exec.Cmd { //创建容器进程
-	args := []string{"init", command}
-	cmd := exec.Command("/proc/self/exe", args...) //调用自身创建子进程(容器进程),同时传入init命令
-	cmd.SysProcAttr = &syscall.SysProcAttr{        //使用namespace隔离
+func sendInitCommand(cmdList []string, writePipe *os.File) {
+	command := strings.Join(cmdList, " ")
+	log.Logout("INFO", "command is "+command)
+	writePipe.WriteString(command)
+	writePipe.Close()
+}
+func createContainerProcess(tty bool) (*exec.Cmd, *os.File) { //创建容器进程
+	readPipe, writePipe, err := os.Pipe()
+	if err != nil {
+		log.Logout("ERROR", "New pipe error "+err.Error())
+		return nil, nil
+	}
+	cmd := exec.Command("/proc/self/exe", "INiTcoNtaInER")
+	cmd.SysProcAttr = &syscall.SysProcAttr{ //使用namespace隔离
 		Cloneflags: syscall.CLONE_NEWUTS |
 			syscall.CLONE_NEWPID |
 			syscall.CLONE_NEWNS |
@@ -30,16 +47,36 @@ func createContainerProcess(tty bool, command string) *exec.Cmd { //创建容器
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	}
-	return cmd
+	cmd.ExtraFiles = []*os.File{readPipe} //传入管道文件读取端
+	return cmd, writePipe
 }
-
-func InitializeContainer(command string) error { //容器内部初始化
-	log.Logout("INFO", command)
+func readCommand() []string {
+	pipe := os.NewFile(uintptr(3), "pipe") //从文件描述符获取管道
+	msg, err := ioutil.ReadAll(pipe)
+	if err != nil {
+		log.Logout("ERROR", "init read pipe error "+err.Error())
+		return nil
+	}
+	msgStr := string(msg)
+	return strings.Split(msgStr, " ")
+}
+func InitializeContainer() error { //容器内部初始化
+	cmdList := readCommand()
+	if len(cmdList) == 0 {
+		log.Logout("ERROR", "Run container get user command error,command list is empty")
+		return nil
+	}
+	log.Logout("DEBUG", "Initializing Container")
+	//设置挂载为私有，不影响其他命名空间
 	syscall.Mount("", "/", "", syscall.MS_PRIVATE|syscall.MS_REC, "")
 	defaultMountFlags := syscall.MS_NOEXEC | syscall.MS_NOSUID | syscall.MS_NODEV
 	syscall.Mount("proc", "/proc", "proc", uintptr(defaultMountFlags), "")
-	argv := []string{command}
-	if err := syscall.Exec(command, argv, os.Environ()); err != nil {
+	path, err := exec.LookPath(cmdList[0])
+	if err != nil {
+		log.Logout("ERROR", "Exec loop path error"+err.Error())
+	}
+	log.Logout("INFO", "Find path"+path)
+	if err := syscall.Exec(path, cmdList[0:], os.Environ()); err != nil { //Exec覆盖容器进程
 		log.Logout("ERROR", err.Error())
 	}
 	return nil
