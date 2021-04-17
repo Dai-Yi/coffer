@@ -33,6 +33,12 @@ Options:
 	-v,-version		Print version information
 `)
 }
+func runUsage() {
+	fmt.Fprintf(os.Stderr, `Usage:	coffer run [OPTIONS]
+Options:
+	-s			Attach STDIN,STDOUT,STDERR
+`)
+}
 func Monitor() {
 	if len(os.Args) <= 1 { //未输入参数
 		log.Logout("ERROR", "Missing Command, enter -h or -help to show usage")
@@ -40,27 +46,35 @@ func Monitor() {
 	} else {
 		flag.Parse()          //解析
 		if flag.NArg() >= 1 { //有非flag参数
-			nonFlagArgument := flag.Args()              //将非flag参数储存起来
-			os.Args = os.Args[flag.NArg()-1:]           //删除阻碍解析的非flag参数(少删一个：Parse会跳过第一个)
-			flag.Parse()                                //重新解析
-			for i := 0; i < len(nonFlagArgument); i++ { //遍历非参数命令
-				if strings.EqualFold(nonFlagArgument[i], "run") { //run命令
-					log.Logout("INFO", "Run "+nonFlagArgument[i+1])
-					proc.Run(showProcess, nonFlagArgument[i+1:])
-				} else if nonFlagArgument[i] == "INiTcoNtaInER" { //内部命令，禁止外部调用
-					proc.InitializeContainer()
-				} else {
-					log.Logout("ERROR", "invalid command")
-					os.Exit(1)
-				}
+			argument := flag.Args()                    //将参数储存起来
+			os.Args = os.Args[flag.NArg()-1:]          //删除阻碍解析的非flag参数
+			flag.Parse()                               //重新解析
+			if strings.EqualFold(argument[0], "run") { //run命令
+				runCommand(argument[1:])
+			} else if argument[0] == "INiTcoNtaInER" { //内部命令，禁止外部调用
+				proc.InitializeContainer()
+			} else {
+				log.Logout("ERROR", "Invalid command")
 			}
+		} else if version {
+			fmt.Println("Version：coffer/1.0.0")
+		}
+		if help {
+			flag.Usage()
+		}
+	}
+}
+
+func runCommand(commands []string) {
+	if len(commands) < 1 { //没有可执行命令
+		fmt.Println("\"coffer run\" requires at least 1 argument.\nSee 'coffer run -help'.")
+		log.Logout("ERROR", "Error command:No executable commands")
+	} else {
+		if help { //run help
+			flag.Usage = runUsage
 		} else {
-			if help {
-				flag.Usage()
-			}
-			if version {
-				log.Logout("INFO", "Version：coffer/1.0.0")
-			}
+			log.Logout("INFO", "Run "+commands[0])
+			proc.Run(showProcess, commands) //传递coffer run之后的命令
 		}
 	}
 }
