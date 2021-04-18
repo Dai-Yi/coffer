@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func Logout(level string, information string) {
+func Logout(level string, information ...interface{}) {
 	//打开日志文件
 	f, err := os.OpenFile("test.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
@@ -20,12 +20,12 @@ func Logout(level string, information string) {
 	logger := log.New(fileAndStdoutWriter, "["+level+"] ", log.LstdFlags) //创建logger
 	switch level {
 	case "INFO":
-		logger.Println(information)
+		logger.Println(information...)
 	case "ERROR":
-		logger.Fatalln(information) //fatal将直接终止程序
+		logger.Fatalln(information...) //fatal将直接终止程序
 	case "PANIC":
-		logger.Panicln(information) //panic将终止函数并“抛出异常”
+		logger.Panicln(information...) //panic将终止函数并“抛出异常”
 	default:
-		logger.Println(information)
+		logger.Println(information...)
 	}
 }

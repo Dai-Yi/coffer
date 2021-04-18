@@ -1,7 +1,9 @@
 package proc
 
 import (
+	"coffer/cgroups"
 	"coffer/log"
+	"coffer/subsys"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -9,7 +11,7 @@ import (
 	"syscall"
 )
 
-func Run(tty bool, cmdList []string) { //run命令, res *subsys.ResourceConfig
+func Run(tty bool, cmdList []string, res *subsys.ResourceConfig) { //run命令
 	newContainer, writePipe := createContainerProcess(tty) //首先创建容器进程和管道
 	if newContainer == nil {                               //容器创建失败
 		log.Logout("ERROR", "Create new container error")
@@ -18,7 +20,12 @@ func Run(tty bool, cmdList []string) { //run命令, res *subsys.ResourceConfig
 	if err := newContainer.Start(); err != nil { //运行容器进程
 		log.Logout("ERROR", err.Error())
 	}
-	sendCommand(cmdList, writePipe) //传递命令给容器
+	//创建cgroup manager，并通过set和apply设置资源限制
+	cgroupManager := cgroups.CgroupManager{CgroupPath: "cofferCgroup"}
+	defer cgroupManager.Destroy()                 //函数执行完后销毁cgroup manager
+	cgroupManager.Set(res)                        //设置容器限制
+	cgroupManager.Apply(newContainer.Process.Pid) //将容器进程加入到各个子系统
+	sendCommand(cmdList, writePipe)               //传递命令给容器
 	newContainer.Wait()
 }
 func sendCommand(cmdList []string, writePipe *os.File) {
@@ -30,7 +37,7 @@ func receiveCommand() []string {
 	pipe := os.NewFile(uintptr(3), "pipe") //从文件描述符获取管道
 	msg, err := ioutil.ReadAll(pipe)
 	if err != nil {
-		log.Logout("ERROR", "init read pipe error "+err.Error())
+		log.Logout("ERROR", "Init read pipe error "+err.Error())
 		return nil
 	}
 	msgStr := string(msg)
@@ -48,9 +55,8 @@ func InitializeContainer() error { //容器内部初始化
 	syscall.Mount("proc", "/proc", "proc", uintptr(defaultMountFlags), "")
 	path, err := exec.LookPath(cmdList[0])
 	if err != nil {
-		log.Logout("ERROR", "Exec loop path error "+err.Error())
+		log.Logout("ERROR", "Exec loop path error,"+err.Error())
 	}
-	log.Logout("INFO", "Find path "+path)
 	if err := syscall.Exec(path, cmdList[0:], os.Environ()); err != nil { //Exec覆盖容器进程
 		log.Logout("ERROR", err.Error())
 	}
