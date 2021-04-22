@@ -26,7 +26,7 @@ func init() {
 	flag.BoolVar(&version, "v", false, "")
 	flag.BoolVar(&version, "version", false, "")
 	flag.BoolVar(&showProcess, "s", false, "")
-	flag.StringVar(&cpuShare, "cpushare", "", "")
+	flag.StringVar(&cpuShare, "cpushare", "0", "")
 	flag.StringVar(&memory, "memory", "", "")
 	flag.StringVar(&cpuset_cpus, "cpuset-cpus", "0", "")
 	flag.StringVar(&cpuset_mems, "cpuset-mems", "0", "")

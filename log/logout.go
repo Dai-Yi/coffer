@@ -8,7 +8,7 @@ import (
 
 func Logout(level string, information ...interface{}) {
 	//打开日志文件
-	f, err := os.OpenFile("test.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	f, err := os.OpenFile("./cofferLogout.log", os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	if err != nil {
 		log.Fatal(err)
 	}
