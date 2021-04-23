@@ -69,6 +69,7 @@ func Monitor() {
 				if flag.NArg() >= 1 { //有待运行程序
 					image = flag.Args() //排除run参数
 					runCommand(image)
+
 				} else { //run后没有可执行程序
 					if help { //run help
 						flag.Usage = runUsage

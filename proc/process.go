@@ -2,6 +2,7 @@ package proc
 
 import (
 	"coffer/cgroups"
+	"coffer/initCNTR"
 	"coffer/log"
 	"coffer/subsys"
 	"os"
@@ -32,6 +33,10 @@ func Run(tty bool, cmdList []string, res *subsys.ResourceConfig) { //run命令
 	cgroupManager.Apply(newContainer.Process.Pid) //将容器进程加入到各个子系统
 	sendCommand(cmdList, writePipe)               //传递命令给容器
 	newContainer.Wait()
+	log.Logout("INFO", "Container closed")
+	mntURL := "/root/mnt/"
+	rootURL := "/root/"
+	defer initCNTR.DeleteWorkSpace(rootURL, mntURL)
 }
 func createContainerProcess(tty bool) (*exec.Cmd, *os.File) { //创建容器进程
 	readPipe, writePipe, err := os.Pipe() //创建管道用于传递命令给容器
@@ -47,12 +52,15 @@ func createContainerProcess(tty bool) (*exec.Cmd, *os.File) { //创建容器进�
 			syscall.CLONE_NEWNET |
 			syscall.CLONE_NEWIPC,
 	}
-	cmd.ExtraFiles = []*os.File{readPipe} //附加管道文件读取端，使容器能够读取管道传入的命令
-	cmd.Dir = "/root/busybox"             //临时
-	if tty {                              //如果需要，显示容器运行信息
+	if tty { //如果需要，显示容器运行信息
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	}
+	cmd.ExtraFiles = []*os.File{readPipe} //附加管道文件读取端，使容器能够读取管道传入的命令
+	mntURL := "/root/mnt/"
+	rootURL := "/root/"
+	initCNTR.NewWorkSpace(rootURL, mntURL)
+	cmd.Dir = mntURL
 	return cmd, writePipe
 }
