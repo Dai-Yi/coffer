@@ -39,6 +39,6 @@ func (c *CgroupManager) Name() error { //查
 	for _, subsystem := range subsys.SubsystemsList {
 		temp = append(temp, subsystem.Name()) //调用每个subsystem的Name方法
 	}
-	log.Logout("INFO", []string{"subsystems name:"}, temp)
+	log.Logout("INFO", "subsystems name:", temp)
 	return nil
 }

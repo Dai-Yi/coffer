@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"coffer/initCNTR"
 	"coffer/log"
 	"coffer/proc"
 	"coffer/subsys"
@@ -77,7 +78,7 @@ func Monitor() {
 					}
 				}
 			} else if argument == "INiTcoNtaInER" { //内部命令，禁止外部调用
-				proc.InitializeContainer()
+				initCNTR.InitializeContainer()
 			} else {
 				log.Logout("ERROR", "Invalid command")
 			}
@@ -94,7 +95,7 @@ func Monitor() {
 	}
 }
 func runCommand(commands []string) {
-	log.Logout("INFO", []string{"Run"}, commands)
+	log.Logout("INFO", "Run", commands)
 	resConfig := &subsys.ResourceConfig{
 		MemoryLimit: memory,
 		CpuShare:    cpuShare,
