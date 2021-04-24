@@ -15,6 +15,7 @@ var (
 	help        bool
 	version     bool
 	showProcess bool
+	dataVolume  string
 	cpuShare    string
 	memory      string
 	cpuset_cpus string
@@ -27,6 +28,7 @@ func init() {
 	flag.BoolVar(&version, "v", false, "")
 	flag.BoolVar(&version, "version", false, "")
 	flag.BoolVar(&showProcess, "s", false, "")
+	flag.StringVar(&dataVolume, "d", "", "")
 	flag.StringVar(&cpuShare, "cpushare", "0", "")
 	flag.StringVar(&memory, "memory", "", "")
 	flag.StringVar(&cpuset_cpus, "cpuset-cpus", "0", "")
@@ -41,6 +43,7 @@ Options:
 	-v,-version		Print version information
 Commands:
 	run			Run a command in a new container
+Run 'coffer COMMAND -h' for more information on a command
 `)
 }
 func runUsage() {
@@ -48,6 +51,7 @@ func runUsage() {
 Run a command in a new container
 Options:
 	-s			Attach STDIN,STDOUT,STDERR
+	-d			Bind mount a data volume(Data permanence)
 	-cpushare		CPU shares (relative weight)
 	-memory			Memory limit
 	-cpuset-cpus		CPUs in which to allow execution
@@ -69,7 +73,6 @@ func Monitor() {
 				if flag.NArg() >= 1 { //有待运行程序
 					image = flag.Args() //排除run参数
 					runCommand(image)
-
 				} else { //run后没有可执行程序
 					if help { //run help
 						flag.Usage = runUsage
@@ -104,5 +107,5 @@ func runCommand(commands []string) {
 			Cpus: cpuset_cpus,
 			Mems: cpuset_mems,
 		}}
-	proc.Run(showProcess, commands, resConfig) //传递coffer run之后的命令
+	proc.Run(showProcess, dataVolume, commands, resConfig) //传递coffer run之后的命令
 }
