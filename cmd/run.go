@@ -1,8 +1,8 @@
-package proc
+package cmd
 
 import (
 	"coffer/cgroups"
-	"coffer/initCNTR"
+	"coffer/cntr"
 	"coffer/log"
 	"coffer/subsys"
 	"os"
@@ -17,7 +17,7 @@ func sendCommand(cmdList []string, writePipe *os.File) {
 	writePipe.Close()              //关闭写入端
 }
 
-func Run(tty bool, volume string, cmdList []string, res *subsys.ResourceConfig) { //run命令
+func run(tty bool, volume string, cmdList []string, res *subsys.ResourceConfig) { //run命令
 	newContainer, writePipe := createContainerProcess(tty, volume) //首先创建容器进程和管道
 	if newContainer == nil {                                       //容器创建失败
 		log.Logout("ERROR", "Create new container error")
@@ -36,7 +36,7 @@ func Run(tty bool, volume string, cmdList []string, res *subsys.ResourceConfig) 
 	log.Logout("INFO", "Container closed")
 	mntURL := "/root/mnt/"
 	rootURL := "/root/"
-	defer initCNTR.DeleteWorkSpace(rootURL, mntURL, volume)
+	defer cntr.DeleteWorkSpace(rootURL, mntURL, volume)
 }
 func createContainerProcess(tty bool, volume string) (*exec.Cmd, *os.File) { //创建容器进程
 	readPipe, writePipe, err := os.Pipe() //创建管道用于传递命令给容器
@@ -60,7 +60,7 @@ func createContainerProcess(tty bool, volume string) (*exec.Cmd, *os.File) { //�
 	cmd.ExtraFiles = []*os.File{readPipe} //附加管道文件读取端，使容器能够读取管道传入的命令
 	mntURL := "/root/mnt/"
 	rootURL := "/root/"
-	initCNTR.NewWorkSpace(rootURL, mntURL, volume)
+	cntr.NewWorkSpace(rootURL, mntURL, volume)
 	cmd.Dir = mntURL
 	return cmd, writePipe
 }

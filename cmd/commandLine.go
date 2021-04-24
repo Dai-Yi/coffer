@@ -1,9 +1,8 @@
 package cmd
 
 import (
-	"coffer/initCNTR"
+	"coffer/cntr"
 	"coffer/log"
-	"coffer/proc"
 	"coffer/subsys"
 	"flag"
 	"fmt"
@@ -43,6 +42,7 @@ Options:
 	-v,-version		Print version information
 Commands:
 	run			Run a command in a new container
+	commit		Create a new image from a container's changes
 Run 'coffer COMMAND -h' for more information on a command
 `)
 }
@@ -58,6 +58,10 @@ Options:
 	-cpuset-mems		MEMs in which to allow execution
 `)
 }
+func commitUsage() {
+	fmt.Fprintf(os.Stderr, `Usage:  coffer commit CONTAINER
+Create a new image from a container's changes`)
+}
 func Monitor() {
 	var image []string
 	if len(os.Args) <= 1 { //未输入参数
@@ -65,7 +69,7 @@ func Monitor() {
 		return
 	} else {
 		flag.Parse()          //第一次解析，解析help、version参数
-		if flag.NArg() >= 1 { //可能有命令,run
+		if flag.NArg() >= 1 { //可能有命令,run,commit
 			argument := os.Args[1] //保存命令
 			os.Args = os.Args[1:]  //删除阻碍解析的coffer命令
 			flag.Parse()           //第二次解析，解析命令参数
@@ -82,7 +86,19 @@ func Monitor() {
 					}
 				}
 			} else if argument == "INiTcoNtaInER" { //内部命令，禁止外部调用
-				initCNTR.InitializeContainer()
+				cntr.InitializeContainer()
+			} else if strings.EqualFold(argument, "commit") {
+				if flag.NArg() == 1 { //有镜像名称
+					image = flag.Args()
+					commitContainer(image[0])
+				} else { //commit后没有镜像名称
+					if help { //commit help
+						flag.Usage = commitUsage
+					} else {
+						fmt.Println("\"coffer commit\" requires at least 1 argument.\nSee 'coffer commit -help'.")
+						log.Logout("ERROR", "Error command:No executable commands")
+					}
+				}
 			} else {
 				log.Logout("ERROR", "Invalid command")
 			}
@@ -107,5 +123,5 @@ func runCommand(commands []string) {
 			Cpus: cpuset_cpus,
 			Mems: cpuset_mems,
 		}}
-	proc.Run(showProcess, dataVolume, commands, resConfig) //传递coffer run之后的命令
+	run(showProcess, dataVolume, commands, resConfig) //传递coffer run之后的命令
 }

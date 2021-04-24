@@ -1,4 +1,4 @@
-package initCNTR
+package cntr
 
 import (
 	"coffer/log"
