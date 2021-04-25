@@ -23,10 +23,6 @@ func Logout(level string, information ...interface{}) {
 	fileline := fmt.Sprintf("%s:%d", file, line)
 	logger := log.New(fileAndStdoutWriter, "["+level+"] "+fileline+" ", log.LstdFlags) //创建logger
 	switch level {
-	case "INFO":
-		logger.Println(information...)
-	case "ERROR":
-		logger.Fatalln(information...) //fatal将直接终止程序
 	case "PANIC":
 		logger.Panicln(information...) //panic将终止函数并“抛出异常”
 	default:

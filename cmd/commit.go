@@ -1,14 +1,15 @@
 package cmd
 
 import (
-	"coffer/log"
+	"fmt"
 	"os/exec"
 )
 
-func commitContainer(imageName string) {
+func commitContainer(imageName string) error {
 	mntURL := "/root/mnt"
 	imageTar := "/root/" + imageName + ".tar"
 	if _, err := exec.Command("tar", "-czf", imageTar, "-C", mntURL, ".").CombinedOutput(); err != nil {
-		log.Logout("ERROR", "Tar folder error", err.Error())
+		return fmt.Errorf("tar folder error,%v", err)
 	}
+	return nil
 }

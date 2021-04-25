@@ -5,9 +5,9 @@ import (
 	"coffer/cntr"
 	"coffer/log"
 	"coffer/subsys"
+	"fmt"
 	"os"
 	"os/exec"
-	"os/signal"
 	"strings"
 	"syscall"
 )
@@ -17,46 +17,31 @@ func sendCommand(cmdList []string, writePipe *os.File) {
 	writePipe.WriteString(command) //命令写入管道
 	writePipe.Close()              //关闭写入端
 }
-func gracefulExit(volume string) { //优雅退出
-	c := make(chan os.Signal) //信号通道
-	// 监听信号
-	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
-	go func() { //goroutine并发函数
-		for {
-			s := <-c
-			switch s {
-			case syscall.SIGQUIT, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGINT:
-				log.Logout("INFO", "Container closed", s)
-				mntURL := "/root/mnt/"
-				rootURL := "/root/"
-				cntr.DeleteWorkSpace(rootURL, mntURL, volume)
-				return
-			default:
-			}
-		}
-	}()
-}
-func run(tty bool, volume string, cmdList []string, res *subsys.ResourceConfig) { //run命令
+func run(tty bool, volume string, cmdList []string, res *subsys.ResourceConfig) error { //run命令
 	newContainer, writePipe := createContainerProcess(tty, volume) //首先创建容器进程和管道
 	if newContainer == nil {                                       //容器创建失败
-		log.Logout("ERROR", "Create new container error")
-		return
+		return fmt.Errorf("create new container error")
 	}
 	if err := newContainer.Start(); err != nil { //运行容器进程
-		log.Logout("ERROR", err.Error())
+		return fmt.Errorf("container start error,%v", err)
 	}
-	gracefulExit(volume)
+	cntr.Monitor(volume)
 	//创建cgroup manager，并通过set和apply设置资源限制
 	cgroupManager := cgroups.CgroupManager{CgroupPath: "cofferCgroup"}
-	defer cgroupManager.Destroy()                 //函数执行完后销毁cgroup manager
-	cgroupManager.Set(res)                        //设置容器限制
-	cgroupManager.Apply(newContainer.Process.Pid) //将容器进程加入到各个子系统
-	sendCommand(cmdList, writePipe)               //传递命令给容器
+	if err := cgroupManager.Set(res); err != nil { //设置容器限制
+		return err
+	}
+	//将容器进程加入到各个子系统
+	if err := cgroupManager.Apply(newContainer.Process.Pid); err != nil {
+		return err
+	}
+	sendCommand(cmdList, writePipe) //传递命令给容器
 	newContainer.Wait()
-	log.Logout("INFO", "Container closed")
-	mntURL := "/root/mnt/"
-	rootURL := "/root/"
-	cntr.DeleteWorkSpace(rootURL, mntURL, volume)
+	if err := cgroupManager.Destroy(); err != nil { //运行完后销毁cgroup manager //以前有defer
+		return err
+	}
+	cntr.GracefulExit()
+	return nil
 }
 func createContainerProcess(tty bool, volume string) (*exec.Cmd, *os.File) { //创建容器进程
 	readPipe, writePipe, err := os.Pipe() //创建管道用于传递命令给容器
@@ -71,6 +56,7 @@ func createContainerProcess(tty bool, volume string) (*exec.Cmd, *os.File) { //�
 			syscall.CLONE_NEWNS |
 			syscall.CLONE_NEWNET |
 			syscall.CLONE_NEWIPC,
+		// Setpgid: true,//开启之后可以kill组进程，但有bug，bash无法使用
 	}
 	if tty { //如果需要，显示容器运行信息
 		cmd.Stdin = os.Stdin

@@ -62,7 +62,7 @@ func commitUsage() {
 	fmt.Fprintf(os.Stderr, `Usage:  coffer commit CONTAINER
 Create a new image from a container's changes`)
 }
-func Monitor() {
+func CMDControl() {
 	var image []string
 	if len(os.Args) <= 1 { //未输入参数
 		log.Logout("ERROR", "Missing Command, enter -h or -help to show usage")
@@ -86,11 +86,11 @@ func Monitor() {
 					}
 				}
 			} else if argument == "INiTcoNtaInER" { //内部命令，禁止外部调用
-				cntr.InitializeContainer()
+				initCommand()
 			} else if strings.EqualFold(argument, "commit") {
 				if flag.NArg() == 1 { //有镜像名称
 					image = flag.Args()
-					commitContainer(image[0])
+					commitCommand(image[0])
 				} else { //commit后没有镜像名称
 					if help { //commit help
 						flag.Usage = commitUsage
@@ -123,5 +123,19 @@ func runCommand(commands []string) {
 			Cpus: cpuset_cpus,
 			Mems: cpuset_mems,
 		}}
-	run(showProcess, dataVolume, commands, resConfig) //传递coffer run之后的命令
+	if err := run(showProcess, dataVolume, commands, resConfig); err != nil {
+		log.Logout("ERROR", "Run image error", err.Error())
+	}
+}
+func commitCommand(image string) {
+	log.Logout("INFO", "Commit", image)
+	if err := commitContainer(image); err != nil {
+		log.Logout("ERROR", "Commit container error:", err.Error())
+	}
+}
+func initCommand() {
+	if err := cntr.InitializeContainer(); err != nil {
+		log.Logout("ERROR", "Initialize container error:", err.Error())
+		cntr.GracefulExit()
+	}
 }
