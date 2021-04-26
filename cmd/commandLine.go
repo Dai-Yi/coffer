@@ -11,14 +11,15 @@ import (
 )
 
 var (
-	help        bool
-	version     bool
-	showProcess bool
-	dataVolume  string
-	cpuShare    string
-	memory      string
-	cpuset_cpus string
-	cpuset_mems string
+	help            bool
+	version         bool
+	interactive     bool
+	background      bool
+	dataPersistence string
+	cpuShare        string
+	memory          string
+	cpuset_cpus     string
+	cpuset_mems     string
 )
 
 func init() {
@@ -26,8 +27,9 @@ func init() {
 	flag.BoolVar(&help, "help", false, "")
 	flag.BoolVar(&version, "v", false, "")
 	flag.BoolVar(&version, "version", false, "")
-	flag.BoolVar(&showProcess, "s", false, "")
-	flag.StringVar(&dataVolume, "d", "", "")
+	flag.BoolVar(&interactive, "i", false, "")
+	flag.BoolVar(&background, "b", false, "")
+	flag.StringVar(&dataPersistence, "p", "", "")
 	flag.StringVar(&cpuShare, "cpushare", "0", "")
 	flag.StringVar(&memory, "memory", "", "")
 	flag.StringVar(&cpuset_cpus, "cpuset-cpus", "0", "")
@@ -50,8 +52,9 @@ func runUsage() {
 	fmt.Fprintf(os.Stderr, `Usage:	coffer run [OPTIONS] IMAGE [COMMAND] [ARG...]
 Run a command in a new container
 Options:
-	-s			Attach STDIN,STDOUT,STDERR
-	-d			Bind mount a data volume(Data permanence)
+	-i			Make the app interactive:attach STDIN,STDOUT,STDERR
+	-p			Bind mount a data volume(Data Persistence)
+	-b			Run container in background(CANNOT be used with -i at the same time)
 	-cpushare		CPU shares (relative weight)
 	-memory			Memory limit
 	-cpuset-cpus		CPUs in which to allow execution
@@ -74,6 +77,10 @@ func CMDControl() {
 			os.Args = os.Args[1:]  //删除阻碍解析的coffer命令
 			flag.Parse()           //第二次解析，解析命令参数
 			if strings.EqualFold(argument, "run") {
+				if background && interactive {
+					log.Logout("ERROR", "Application interaction(-i) and background running(-b) cannot be used at the same time")
+					return
+				}
 				if flag.NArg() >= 1 { //有待运行程序
 					image = flag.Args() //排除run参数
 					runCommand(image)
@@ -83,6 +90,7 @@ func CMDControl() {
 					} else {
 						fmt.Println("\"coffer run\" requires at least 1 argument.\nSee 'coffer run -help'.")
 						log.Logout("ERROR", "Error command:No executable commands")
+						return
 					}
 				}
 			} else if argument == "INiTcoNtaInER" { //内部命令，禁止外部调用
@@ -97,16 +105,19 @@ func CMDControl() {
 					} else {
 						fmt.Println("\"coffer commit\" requires at least 1 argument.\nSee 'coffer commit -help'.")
 						log.Logout("ERROR", "Error command:No executable commands")
+						return
 					}
 				}
 			} else {
 				log.Logout("ERROR", "Invalid command")
+				return
 			}
 		} else { //没有命令，只有flag参数
 			if version {
 				fmt.Println("Version：coffer/1.0.0")
 			} else {
 				log.Logout("ERROR", "Invalid command")
+				return
 			}
 		}
 		if help {
@@ -123,14 +134,16 @@ func runCommand(commands []string) {
 			Cpus: cpuset_cpus,
 			Mems: cpuset_mems,
 		}}
-	if err := run(showProcess, dataVolume, commands, resConfig); err != nil {
-		log.Logout("ERROR", "Run image error", err.Error())
+	if err := run(interactive, background, dataPersistence, commands, resConfig); err != nil {
+		log.Logout("ERROR", "Run image error,", err.Error())
+		return
 	}
 }
 func commitCommand(image string) {
 	log.Logout("INFO", "Commit", image)
 	if err := commitContainer(image); err != nil {
 		log.Logout("ERROR", "Commit container error:", err.Error())
+		return
 	}
 }
 func initCommand() {

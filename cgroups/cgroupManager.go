@@ -19,13 +19,12 @@ func (c *CgroupManager) Apply(pid int) error { //应用
 	}
 	return nil
 }
-func (c *CgroupManager) Destroy() error { //删
+func (c *CgroupManager) Destroy() { //删
 	for _, subsystem := range subsys.SubsystemsList {
 		if err := subsystem.Remove(c.CgroupPath); err != nil { //调用每个subsystem的remove方法
-			return fmt.Errorf("remove cgroup error:%v", err)
+			log.Logout("WARN", "remove cgroup fail:", err.Error())
 		}
 	}
-	return nil
 }
 func (c *CgroupManager) Set(res *subsys.ResourceConfig) error { //改
 	for _, subsystem := range subsys.SubsystemsList {
