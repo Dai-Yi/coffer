@@ -20,6 +20,7 @@ var (
 	memory          string
 	cpuset_cpus     string
 	cpuset_mems     string
+	name            string
 )
 
 func init() {
@@ -34,6 +35,7 @@ func init() {
 	flag.StringVar(&memory, "memory", "", "")
 	flag.StringVar(&cpuset_cpus, "cpuset-cpus", "0", "")
 	flag.StringVar(&cpuset_mems, "cpuset-mems", "0", "")
+	flag.StringVar(&name, "name", "", "")
 	flag.Usage = usage
 }
 func usage() {
@@ -59,6 +61,7 @@ Options:
 	-memory			Memory limit
 	-cpuset-cpus		CPUs in which to allow execution
 	-cpuset-mems		MEMs in which to allow execution
+	-name				Assign a name to the container
 `)
 }
 func commitUsage() {
@@ -66,7 +69,7 @@ func commitUsage() {
 Create a new image from a container's changes`)
 }
 func CMDControl() {
-	var image []string
+	var command []string
 	if len(os.Args) <= 1 { //未输入参数
 		log.Logout("ERROR", "Missing Command, enter -h or -help to show usage")
 		return
@@ -82,8 +85,8 @@ func CMDControl() {
 					return
 				}
 				if flag.NArg() >= 1 { //有待运行程序
-					image = flag.Args() //排除run参数
-					runCommand(image)
+					command = flag.Args() //排除run参数
+					runCommand(command)
 				} else { //run后没有可执行程序
 					if help { //run help
 						flag.Usage = runUsage
@@ -97,8 +100,8 @@ func CMDControl() {
 				initCommand()
 			} else if strings.EqualFold(argument, "commit") {
 				if flag.NArg() == 1 { //有镜像名称
-					image = flag.Args()
-					commitCommand(image[0])
+					command = flag.Args()
+					commitCommand(command[0])
 				} else { //commit后没有镜像名称
 					if help { //commit help
 						flag.Usage = commitUsage
@@ -134,7 +137,7 @@ func runCommand(commands []string) {
 			Cpus: cpuset_cpus,
 			Mems: cpuset_mems,
 		}}
-	if err := run(interactive, background, dataPersistence, commands, resConfig); err != nil {
+	if err := run(interactive, background, name, dataPersistence, commands, resConfig); err != nil {
 		log.Logout("ERROR", "Run image error,", err.Error())
 		return
 	}

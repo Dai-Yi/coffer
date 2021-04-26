@@ -17,7 +17,7 @@ func sendCommand(cmdList []string, writePipe *os.File) {
 	writePipe.WriteString(command) //命令写入管道
 	writePipe.Close()              //关闭写入端
 }
-func run(tty bool, background bool, volume string, cmdList []string, res *subsys.ResourceConfig) error { //run命令
+func run(tty bool, background bool, volume string, name string, cmdList []string, res *subsys.ResourceConfig) error { //run命令
 	newContainer, writePipe := createContainerProcess(tty, volume) //首先创建容器进程和管道
 	if newContainer == nil {                                       //容器创建失败
 		return fmt.Errorf("create new container error")
@@ -26,9 +26,12 @@ func run(tty bool, background bool, volume string, cmdList []string, res *subsys
 		return fmt.Errorf("container start error,%v", err)
 	}
 	cntr.Monitor(volume)
+	containerID, err := cntr.GenerateContainerInfo(newContainer.Process.Pid, cmdList, name, volume)
+	if err != nil {
+		return fmt.Errorf("generate container information error,%v", err)
+	}
 	//创建cgroup manager，并通过set和apply设置资源限制
 	cgroupManager := cgroups.CgroupManager{CgroupPath: "cofferCgroup"}
-
 	if err := cgroupManager.Set(res); err != nil { //设置容器限制
 		cntr.GracefulExit()
 		return err
@@ -41,6 +44,7 @@ func run(tty bool, background bool, volume string, cmdList []string, res *subsys
 	sendCommand(cmdList, writePipe) //传递命令给容器
 	if tty {
 		newContainer.Wait() //容器进程等待容器内进程结束
+		cntr.DeleteContainerInfo(containerID)
 		defer cntr.GracefulExit()
 	}
 	cgroupManager.Destroy() //运行完后销毁cgroup manager
