@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"coffer/cntr"
+	"coffer/container"
 	"coffer/log"
 	"coffer/subsys"
 	"flag"
@@ -150,8 +150,8 @@ func commitCommand(image string) {
 	}
 }
 func initCommand() {
-	if err := cntr.InitializeContainer(); err != nil {
+	if err := container.InitializeContainer(); err != nil {
 		log.Logout("ERROR", "Initialize container error:", err.Error())
-		cntr.GracefulExit()
+		container.GracefulExit()
 	}
 }

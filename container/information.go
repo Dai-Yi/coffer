@@ -1,4 +1,4 @@
-package cntr
+package container
 
 import (
 	"coffer/log"
@@ -18,9 +18,9 @@ var (
 	DefaultInfoLocation string = "/var/run/coffer/%s/"
 	ConfigName          string = "containerConfig.json"
 	//ContainerLogFile    string = "container.log"
-	//RootURL             string = "/root"
-	//MntURL              string = "/root/mnt/%s"
-	//WriteLayerURL       string = "/root/writeLayer/%s"
+	RootURL       string = "/root"
+	MntURL        string = "/root/mnt/%s"
+	WriteLayerURL string = "/root/writeLayer/%s"
 )
 
 type containerInfo struct {
@@ -44,7 +44,7 @@ func idGenerator() string { //ID生成器
 }
 
 //生成容器信息
-func GenerateContainerInfo(containerPID int, commandArray []string,
+func GenerateInfo(containerPID int, commandArray []string,
 	containerName string, volume string) (string, error) {
 	id := idGenerator() //生成10位id
 	if containerName == "" {
@@ -66,7 +66,7 @@ func GenerateContainerInfo(containerPID int, commandArray []string,
 	}
 	jsonString := string(jsonBytes)
 	dirURL := fmt.Sprintf(DefaultInfoLocation, containerName) //string拼接成路径
-	if !PathExists(dirURL) {                                  //如果路径不存在则创建
+	if !pathExists(dirURL) {                                  //如果路径不存在则创建
 		if err := os.MkdirAll(dirURL, 0622); err != nil {
 			return "", fmt.Errorf("mkdir error,%v", err)
 		}

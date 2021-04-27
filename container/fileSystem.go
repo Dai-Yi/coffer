@@ -1,4 +1,4 @@
-package cntr
+package container
 
 import (
 	"coffer/log"
@@ -22,11 +22,21 @@ func NewWorkSpace(rootURL string, mntURL string, volume string) {
 	}
 }
 
+//判断文件路径是否存在
+func pathExists(path string) bool {
+	_, err := os.Stat(path)
+	if err == nil {
+		return true
+	} else {
+		return !os.IsNotExist(err)
+	}
+}
+
 //挂载数据卷
 func mountVolume(rootURL string, mntURL string, volumeURLs []string) {
 	//创建宿主机文件目录
 	hostURL := volumeURLs[0]
-	if !PathExists(hostURL) {
+	if !pathExists(hostURL) {
 		if err := os.Mkdir(hostURL, 0777); err != nil {
 			log.Logout("ERROR", "Mkdir host dir error", err.Error())
 		}
@@ -45,21 +55,11 @@ func mountVolume(rootURL string, mntURL string, volumeURLs []string) {
 	}
 }
 
-//判断文件路径是否存在
-func PathExists(path string) bool {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true
-	} else {
-		return !os.IsNotExist(err)
-	}
-}
-
 //创建只读层
 func createReadOnlyLayer(rootURL string) {
 	program := rootURL + "busybox/"
 	imageURL := rootURL + "busybox.tar"
-	if !PathExists(program) {
+	if !pathExists(program) {
 		if err := os.MkdirAll(program, 0622); err != nil {
 			log.Logout("ERROR", "Mkdir error ", err)
 		}
@@ -72,7 +72,7 @@ func createReadOnlyLayer(rootURL string) {
 //创建writeLayer文件夹作为容器可写层
 func createWriteLayer(rootURL string) {
 	writeURL := rootURL + "writeLayer/"
-	if !PathExists(writeURL) {
+	if !pathExists(writeURL) {
 		if err := os.MkdirAll(writeURL, 0777); err != nil {
 			log.Logout("ERROR", "Mkdir write layer dir error", err.Error())
 		}
@@ -81,7 +81,7 @@ func createWriteLayer(rootURL string) {
 
 //创建mnt文件夹作为挂载点
 func createMountPoint(rootURL string, mntURL string) {
-	if !PathExists(mntURL) {
+	if !pathExists(mntURL) {
 		if err := os.MkdirAll(mntURL, 0777); err != nil {
 			log.Logout("ERROR", "Mkdir mountpoint dir error", err.Error())
 		}

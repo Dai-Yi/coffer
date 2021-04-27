@@ -1,4 +1,4 @@
-package cntr
+package container
 
 import (
 	"coffer/log"

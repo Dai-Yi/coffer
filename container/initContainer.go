@@ -1,4 +1,4 @@
-package cntr
+package container
 
 import (
 	"coffer/log"
@@ -10,6 +10,34 @@ import (
 	"strings"
 	"syscall"
 )
+
+func NewProcess(tty bool, volume string) (*exec.Cmd, *os.File) { //创建容器进程
+	readPipe, writePipe, err := os.Pipe() //创建管道用于传递命令给容器
+	if err != nil {                       //管道创建失败
+		log.Logout("ERROR", "New pipe error "+err.Error())
+		return nil, nil
+	}
+	cmd := exec.Command("/proc/self/exe", "INiTcoNtaInER") //调用自身，创建容器进程
+	cmd.SysProcAttr = &syscall.SysProcAttr{                //使用namespace隔离
+		Cloneflags: syscall.CLONE_NEWUTS |
+			syscall.CLONE_NEWPID |
+			syscall.CLONE_NEWNS |
+			syscall.CLONE_NEWNET |
+			syscall.CLONE_NEWIPC,
+		// Setpgid: true,//开启之后可以kill组进程，但有bug，bash无法使用
+	}
+	if tty { //如果需要，显示容器运行信息
+		cmd.Stdin = os.Stdin
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
+	cmd.ExtraFiles = []*os.File{readPipe} //附加管道文件读取端，使容器能够读取管道传入的命令
+	mntURL := "/root/mnt/"
+	rootURL := "/root/"
+	NewWorkSpace(rootURL, mntURL, volume)
+	cmd.Dir = mntURL
+	return cmd, writePipe
+}
 
 func receiveCommand() []string {
 	pipe := os.NewFile(uintptr(3), "pipe") //从文件描述符获取管道
