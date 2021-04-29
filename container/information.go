@@ -4,11 +4,7 @@ import (
 	"coffer/log"
 	"encoding/json"
 	"fmt"
-	"math/rand"
 	"os"
-	"strconv"
-	"strings"
-	"time"
 )
 
 var (
@@ -17,10 +13,10 @@ var (
 	Exit                string = "exited"
 	DefaultInfoLocation string = "/var/run/coffer/%s/"
 	ConfigFile          string = "containerConfig.json"
-	//ContainerLogFile    string = "container.log"
-	RootURL       string = "/root/"
-	MntURL        string = "/root/mnt/%s/"
-	WriteLayerURL string = "/root/writeLayer/%s/"
+	ContainerLogFile    string = "container.log"
+	RootURL             string = "/root/"
+	MntURL              string = "/root/mnt/%s/"
+	WriteLayerURL       string = "/root/writeLayer/%s/"
 )
 
 type ContainerInfo struct {
@@ -34,60 +30,36 @@ type ContainerInfo struct {
 	//PortMapping []string `json:"portmapping"` //端口映射
 }
 
-func idGenerator() string { //ID生成器
-	rand.Seed(time.Now().UnixNano()) //以纳秒时间戳为种子
-	id := make([]byte, 10)           //十位ID
-	for i := range id {
-		id[i] = byte(rand.Intn(10) + 48) //产生0-9的伪随机数
-	}
-	temp := string(id)
-	return temp
-}
-
-//生成容器信息
-func GenerateInfo(containerPID int, commandArray []string,
-	containerName string, volume string) (string, error) {
-	id := idGenerator() //生成10位id
-	if containerName == "" {
-		containerName = id
-	}
-	containerInformation := &ContainerInfo{
-		Id:          id,
-		Pid:         strconv.Itoa(containerPID),
-		Command:     strings.Join(commandArray, ""),           //容器所执行的指令
-		CreatedTime: time.Now().Format("2006-01-02 15:04:05"), //生成创建时间,ps:必须是这个时间
-		Status:      RUNNING,
-		Name:        containerName,
-		Volume:      volume,
-	}
+//储存容器信息
+func StoreInfo(c ContainerInfo) error {
 	//将容器信息化为字符串
-	jsonBytes, err := json.Marshal(containerInformation)
+	jsonBytes, err := json.Marshal(c)
 	if err != nil {
-		return "", fmt.Errorf("record container info error,%v", err)
+		return fmt.Errorf("record container info error,%v", err)
 	}
 	jsonString := string(jsonBytes)
-	dirURL := fmt.Sprintf(DefaultInfoLocation, containerName) //string拼接成路径
-	if !PathExists(dirURL) {                                  //如果路径不存在则创建
+	dirURL := fmt.Sprintf(DefaultInfoLocation, c.Name) //string拼接成路径
+	if !PathExists(dirURL) {                           //如果路径不存在则创建
 		if err := os.MkdirAll(dirURL, 0622); err != nil {
-			return "", fmt.Errorf("mkdir error,%v", err)
+			return fmt.Errorf("mkdir error,%v", err)
 		}
 	}
 	//创建json文件
 	jsonfile := dirURL + ConfigFile
 	file, err := os.Create(jsonfile)
 	if err != nil {
-		return "", fmt.Errorf("create json file error,%v", err)
+		return fmt.Errorf("create json file error,%v", err)
 	}
 	defer file.Close()
 	//将json化之后的数据写入文件
 	if _, err := file.WriteString(jsonString); err != nil {
-		return "", fmt.Errorf("write file error,%v", err)
+		return fmt.Errorf("write file error,%v", err)
 	}
-	return id, nil
+	return nil
 }
 
 //删除容器信息
-func DeleteContainerInfo(containerId string) {
+func DeleteInfo(containerId string) {
 	dirURL := fmt.Sprintf(DefaultInfoLocation, containerId) //拼接路径
 	if err := os.RemoveAll(dirURL); err != nil {
 		log.Logout("ERROR", "Remove dir error ", err)

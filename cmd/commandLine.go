@@ -46,8 +46,9 @@ Options:
 	-v,-version		Print version information
 Commands:
 	run			Run a command in a new container
-	commit		Create a new image from a container's changes
+	commit		Save the contents of the running container as a image
 	ps			List containers
+	log			Print log of a container
 Run 'coffer COMMAND -h' for more information on a command
 `)
 }
@@ -67,12 +68,20 @@ Options:
 }
 
 func commitUsage() {
-	fmt.Fprintf(os.Stderr, `Usage:  coffer commit CONTAINER
-Create a new image from a container's changes`)
+	fmt.Fprintf(os.Stderr, `Usage:  coffer commit IMAGE
+Save the contents of the running container as a image
+`)
 }
+
 func psUsage() {
 	fmt.Fprintf(os.Stderr, `Usage:	coffer ps
 List containers
+`)
+}
+
+func logUsage() {
+	fmt.Fprintf(os.Stderr, `Usage:  coffer log CONTAINER
+Print log of a container
 `)
 }
 func CMDControl() {
@@ -120,13 +129,27 @@ func CMDControl() {
 				}
 			} else if strings.EqualFold(argument, "ps") { //ps 指令
 				if flag.NArg() >= 1 { //有非flag参数
-					fmt.Println("ERROR")
+					fmt.Println("there are redundant parameters.\nSee 'coffer ps -help'.")
+					log.Logout("ERROR", "Error command:Redundant commands")
 					return
 				} else {
 					if help { //ps help
 						flag.Usage = psUsage
 					} else {
 						psCommand()
+					}
+				}
+			} else if strings.EqualFold(argument, "log") { //log指令
+				if flag.NArg() == 1 { //有容器名称
+					command = flag.Args()
+					logCommand(command[0])
+				} else { //log后没有容器名称
+					if help { //log help
+						flag.Usage = logUsage
+					} else {
+						fmt.Println("\"coffer log\" requires at least 1 argument.\nSee 'coffer log -help'.")
+						log.Logout("ERROR", "Error command:No executable commands")
+						return
 					}
 				}
 			} else {
@@ -176,5 +199,10 @@ func initCommand() {
 func psCommand() {
 	if err := ListContainers(); err != nil {
 		log.Logout("ERROR", "List container error:", err.Error())
+	}
+}
+func logCommand(container string) {
+	if err := LogContainer(container); err != nil {
+		log.Logout("ERROR", "log container error:", err.Error())
 	}
 }
