@@ -43,7 +43,7 @@ func run(tty bool, background bool, volume string, name string, cmdList []string
 		containerProcess.Wait() //容器进程等待容器内进程结束
 		container.DeleteContainerInfo(containerID)
 		defer container.GracefulExit()
+		cgroupManager.Destroy() //运行完后销毁cgroup manager
 	}
-	cgroupManager.Destroy() //运行完后销毁cgroup manager
 	return nil
 }

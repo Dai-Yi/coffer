@@ -47,6 +47,7 @@ Options:
 Commands:
 	run			Run a command in a new container
 	commit		Create a new image from a container's changes
+	ps			List containers
 Run 'coffer COMMAND -h' for more information on a command
 `)
 }
@@ -61,12 +62,18 @@ Options:
 	-memory			Memory limit
 	-cpuset-cpus		CPUs in which to allow execution
 	-cpuset-mems		MEMs in which to allow execution
-	-name				Assign a name to the container
+	-name			Assign a name to the container
 `)
 }
+
 func commitUsage() {
 	fmt.Fprintf(os.Stderr, `Usage:  coffer commit CONTAINER
 Create a new image from a container's changes`)
+}
+func psUsage() {
+	fmt.Fprintf(os.Stderr, `Usage:	coffer ps
+List containers
+`)
 }
 func CMDControl() {
 	var command []string
@@ -76,10 +83,10 @@ func CMDControl() {
 	} else {
 		flag.Parse()          //第一次解析，解析help、version参数
 		if flag.NArg() >= 1 { //可能有命令,run,commit
-			argument := os.Args[1] //保存命令
-			os.Args = os.Args[1:]  //删除阻碍解析的coffer命令
-			flag.Parse()           //第二次解析，解析命令参数
-			if strings.EqualFold(argument, "run") {
+			argument := os.Args[1]                  //保存命令
+			os.Args = os.Args[1:]                   //删除阻碍解析的coffer命令
+			flag.Parse()                            //第二次解析，解析命令参数
+			if strings.EqualFold(argument, "run") { //run指令
 				if background && interactive {
 					log.Logout("ERROR", "Application interaction(-i) and background running(-b) cannot be used at the same time")
 					return
@@ -98,7 +105,7 @@ func CMDControl() {
 				}
 			} else if argument == "INiTcoNtaInER" { //内部命令，禁止外部调用
 				initCommand()
-			} else if strings.EqualFold(argument, "commit") {
+			} else if strings.EqualFold(argument, "commit") { //commit指令
 				if flag.NArg() == 1 { //有镜像名称
 					command = flag.Args()
 					commitCommand(command[0])
@@ -109,6 +116,17 @@ func CMDControl() {
 						fmt.Println("\"coffer commit\" requires at least 1 argument.\nSee 'coffer commit -help'.")
 						log.Logout("ERROR", "Error command:No executable commands")
 						return
+					}
+				}
+			} else if strings.EqualFold(argument, "ps") { //ps 指令
+				if flag.NArg() >= 1 { //有非flag参数
+					fmt.Println("ERROR")
+					return
+				} else {
+					if help { //ps help
+						flag.Usage = psUsage
+					} else {
+						psCommand()
 					}
 				}
 			} else {
@@ -137,7 +155,7 @@ func runCommand(commands []string) {
 			Cpus: cpuset_cpus,
 			Mems: cpuset_mems,
 		}}
-	if err := run(interactive, background, name, dataPersistence, commands, resConfig); err != nil {
+	if err := run(interactive, background, dataPersistence, name, commands, resConfig); err != nil {
 		log.Logout("ERROR", "Run image error,", err.Error())
 		return
 	}
@@ -153,5 +171,10 @@ func initCommand() {
 	if err := container.InitializeContainer(); err != nil {
 		log.Logout("ERROR", "Initialize container error:", err.Error())
 		container.GracefulExit()
+	}
+}
+func psCommand() {
+	if err := ListContainers(); err != nil {
+		log.Logout("ERROR", "List container error:", err.Error())
 	}
 }

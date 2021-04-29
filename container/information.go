@@ -16,14 +16,14 @@ var (
 	STOP                string = "stopped"
 	Exit                string = "exited"
 	DefaultInfoLocation string = "/var/run/coffer/%s/"
-	ConfigName          string = "containerConfig.json"
+	ConfigFile          string = "containerConfig.json"
 	//ContainerLogFile    string = "container.log"
-	RootURL       string = "/root"
-	MntURL        string = "/root/mnt/%s"
-	WriteLayerURL string = "/root/writeLayer/%s"
+	RootURL       string = "/root/"
+	MntURL        string = "/root/mnt/%s/"
+	WriteLayerURL string = "/root/writeLayer/%s/"
 )
 
-type containerInfo struct {
+type ContainerInfo struct {
 	Pid         string `json:"pid"`        //容器的init进程在宿主机上的 PID
 	Id          string `json:"id"`         //容器Id
 	Name        string `json:"name"`       //容器名
@@ -38,9 +38,10 @@ func idGenerator() string { //ID生成器
 	rand.Seed(time.Now().UnixNano()) //以纳秒时间戳为种子
 	id := make([]byte, 10)           //十位ID
 	for i := range id {
-		id[i] = byte(rand.Intn(10)) //产生0-9的伪随机数
+		id[i] = byte(rand.Intn(10) + 48) //产生0-9的伪随机数
 	}
-	return string(id)
+	temp := string(id)
+	return temp
 }
 
 //生成容器信息
@@ -50,7 +51,7 @@ func GenerateInfo(containerPID int, commandArray []string,
 	if containerName == "" {
 		containerName = id
 	}
-	containerInformation := &containerInfo{
+	containerInformation := &ContainerInfo{
 		Id:          id,
 		Pid:         strconv.Itoa(containerPID),
 		Command:     strings.Join(commandArray, ""),           //容器所执行的指令
@@ -66,13 +67,13 @@ func GenerateInfo(containerPID int, commandArray []string,
 	}
 	jsonString := string(jsonBytes)
 	dirURL := fmt.Sprintf(DefaultInfoLocation, containerName) //string拼接成路径
-	if !pathExists(dirURL) {                                  //如果路径不存在则创建
+	if !PathExists(dirURL) {                                  //如果路径不存在则创建
 		if err := os.MkdirAll(dirURL, 0622); err != nil {
 			return "", fmt.Errorf("mkdir error,%v", err)
 		}
 	}
 	//创建json文件
-	jsonfile := dirURL + "/" + ConfigName
+	jsonfile := dirURL + ConfigFile
 	file, err := os.Create(jsonfile)
 	if err != nil {
 		return "", fmt.Errorf("create json file error,%v", err)
