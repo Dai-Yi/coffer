@@ -34,21 +34,24 @@ func NewProcess(tty bool, volume string, name string) (*exec.Cmd, *os.File) { //
 		dirURL := fmt.Sprintf(DefaultInfoLocation, name)
 		if !PathExists(dirURL) {
 			if err := os.MkdirAll(dirURL, 0622); err != nil {
-				log.Logout("ERROR", "container process mkdir dir error,", err.Error())
+				log.Logout("ERROR", "Container process mkdir error,", err.Error())
 				return nil, nil
 			}
 		}
 		stdLogFilePath := dirURL + ContainerLogFile
 		stdLogFile, err := os.Create(stdLogFilePath)
 		if err != nil {
-			log.Logout("ERROR", "container process create log file error", err.Error())
+			log.Logout("ERROR", "Container process create log file error", err.Error())
 			return nil, nil
 		}
 		cmd.Stdout = stdLogFile
 	}
 	cmd.ExtraFiles = []*os.File{readPipe} //附加管道文件读取端，使容器能够读取管道传入的命令
-	NewWorkSpace(RootURL, MntURL, volume)
-	cmd.Dir = MntURL
+	cmd.Dir = fmt.Sprintf(MntURL, name)
+	if err := NewWorkSpace(name, volume); err != nil {
+		log.Logout("ERROR", "Create new work space error:", err.Error())
+		return nil, nil
+	}
 	return cmd, writePipe
 }
 

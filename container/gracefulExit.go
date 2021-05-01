@@ -18,7 +18,7 @@ func GracefulExit() { //优雅退出
 		log.Logout("ERROR", "Kill process error", err.Error())
 	}
 }
-func Monitor(volume string) { //优雅退出
+func Monitor(volume string, contaienrName string) { //优雅退出
 	c := make(chan os.Signal) //信号通道
 	// 监听退出信号
 	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
@@ -26,7 +26,7 @@ func Monitor(volume string) { //优雅退出
 		for s := range c {
 			switch s {
 			case syscall.SIGQUIT, syscall.SIGHUP, syscall.SIGTERM, syscall.SIGINT:
-				DeleteWorkSpace("/root/", "/root/mnt/", volume)
+				DeleteWorkSpace(volume, contaienrName)
 				log.Logout("INFO", "Container closed")
 				os.Exit(0)
 			default:

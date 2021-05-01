@@ -60,7 +60,7 @@ func run(tty bool, background bool, volume string, containerName string,
 	if tty {
 		containerProcess.Wait() //容器进程等待容器内进程结束
 		container.DeleteInfo(id)
-		container.DeleteWorkSpace(container.RootURL, container.MntURL, volume)
+		container.DeleteWorkSpace(volume, containerName)
 		log.Logout("INFO", "Container closed")
 		os.Exit(0)
 		// defer container.GracefulExit()

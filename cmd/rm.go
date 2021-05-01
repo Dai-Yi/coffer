@@ -23,6 +23,6 @@ func rmContainer(containerName string) error {
 	if err := os.RemoveAll(dirURL); err != nil {
 		return fmt.Errorf("remove file %s error %v", dirURL, err)
 	}
-	container.DeleteWorkSpace(container.RootURL, container.MntURL, containerInfo.Volume)
+	container.DeleteWorkSpace(containerInfo.Volume, containerName)
 	return nil
 }
