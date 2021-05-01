@@ -49,11 +49,14 @@ Commands:
 	commit		Save the contents of the running container as a image
 	ps			List containers
 	log			Print log of a container
+	exec		Run a command in a running container
+	stop		Stop the running container
+	rm			Remove the stopped container
 Run 'coffer COMMAND -h' for more information on a command
 `)
 }
 func runUsage() {
-	fmt.Fprintf(os.Stderr, `Usage:	coffer run [OPTIONS] IMAGE [COMMAND] [ARG...]
+	fmt.Fprintf(os.Stderr, `Usage:	coffer run [OPTIONS] IMAGE [COMMAND]
 Run a command in a new container
 Options:
 	-i			Make the app interactive:attach STDIN,STDOUT,STDERR
@@ -66,26 +69,37 @@ Options:
 	-name			Assign a name to the container
 `)
 }
-
 func commitUsage() {
 	fmt.Fprintf(os.Stderr, `Usage:  coffer commit IMAGE
 Save the contents of the running container as a image
 `)
 }
-
 func psUsage() {
 	fmt.Fprintf(os.Stderr, `Usage:	coffer ps
 List containers
 `)
 }
-
 func logUsage() {
 	fmt.Fprintf(os.Stderr, `Usage:  coffer log CONTAINER
 Print log of a container
 `)
 }
+func execUsage() {
+	fmt.Fprintf(os.Stderr, `Usage:  coffer exec CONTAINER COMMAND
+Run a command in a running container
+`)
+}
+func stopUsage() {
+	fmt.Fprintf(os.Stderr, `Usage:  coffer stop CONTAINER
+Stop the running container
+`)
+}
+func rmUsage() {
+	fmt.Fprintf(os.Stderr, `Usage:  coffer rm CONTAINER
+Remove the stopped container
+`)
+}
 func CMDControl() {
-	var command []string
 	if len(os.Args) <= 1 { //未输入参数
 		log.Logout("ERROR", "Missing Command, enter -h or -help to show usage")
 		return
@@ -101,31 +115,17 @@ func CMDControl() {
 					return
 				}
 				if flag.NArg() >= 1 { //有待运行程序
-					command = flag.Args() //排除run参数
-					runCommand(command)
+					runCommand(flag.Args()) //排除run参数
 				} else { //run后没有可执行程序
-					if help { //run help
-						flag.Usage = runUsage
-					} else {
-						fmt.Println("\"coffer run\" requires at least 1 argument.\nSee 'coffer run -help'.")
-						log.Logout("ERROR", "Error command:No executable commands")
-						return
-					}
+					helpAndErrorHandle("run", runUsage)
 				}
 			} else if argument == "INiTcoNtaInER" { //内部命令，禁止外部调用
 				initCommand()
 			} else if strings.EqualFold(argument, "commit") { //commit指令
 				if flag.NArg() == 1 { //有镜像名称
-					command = flag.Args()
-					commitCommand(command[0])
+					commitCommand(flag.Args()[0])
 				} else { //commit后没有镜像名称
-					if help { //commit help
-						flag.Usage = commitUsage
-					} else {
-						fmt.Println("\"coffer commit\" requires at least 1 argument.\nSee 'coffer commit -help'.")
-						log.Logout("ERROR", "Error command:No executable commands")
-						return
-					}
+					helpAndErrorHandle("commit", commitUsage)
 				}
 			} else if strings.EqualFold(argument, "ps") { //ps 指令
 				if flag.NArg() >= 1 { //有非flag参数
@@ -141,16 +141,32 @@ func CMDControl() {
 				}
 			} else if strings.EqualFold(argument, "log") { //log指令
 				if flag.NArg() == 1 { //有容器名称
-					command = flag.Args()
-					logCommand(command[0])
+					logCommand(flag.Args()[0])
 				} else { //log后没有容器名称
-					if help { //log help
-						flag.Usage = logUsage
-					} else {
-						fmt.Println("\"coffer log\" requires at least 1 argument.\nSee 'coffer log -help'.")
-						log.Logout("ERROR", "Error command:No executable commands")
-						return
-					}
+					helpAndErrorHandle("log", logUsage)
+				}
+			} else if strings.EqualFold(argument, "exec") { //exec指令
+				//若已经指定了环境变量,说明C代码已经运行,直接返回以免重复调用
+				if os.Getenv(ENV_EXEC_PID) != "" {
+					log.Logout("INFO", "pid callback,pid:", os.Getegid())
+					return
+				}
+				if flag.NArg() >= 2 { //有容器名和命令
+					execCommand(flag.Args())
+				} else { //exec后缺少容器名或命令
+					helpAndErrorHandle("exec", execUsage)
+				}
+			} else if strings.EqualFold(argument, "stop") { //stop指令
+				if flag.NArg() == 1 { //有容器名称
+					stopCommand(flag.Args()[0])
+				} else { //stop后没有容器名称
+					helpAndErrorHandle("stop", stopUsage)
+				}
+			} else if strings.EqualFold(argument, "rm") { //rm指令{
+				if flag.NArg() == 1 { //有容器名称
+					rmCommand(flag.Args()[0])
+				} else { //rm后没有容器名称
+					helpAndErrorHandle("rm", rmUsage)
 				}
 			} else {
 				log.Logout("ERROR", "Invalid command")
@@ -169,6 +185,21 @@ func CMDControl() {
 		}
 	}
 }
+func helpAndErrorHandle(action string, usage func()) {
+	if help {
+		flag.Usage = usage
+	} else {
+		switch action {
+		case "run", "commit", "log", "stop", "rm":
+			fmt.Printf("\"coffer run\" requires at least 1 argument.\nSee 'coffer %v -help'.\n", action)
+			log.Logout("ERROR", "Error command:No executable commands")
+		case "exec":
+			fmt.Println("\"coffer exec\" requires two parameters: container and command.\nSee 'coffer exec -help'.")
+			log.Logout("ERROR", "Error command:No container specified or executable commands")
+		}
+		os.Exit(0)
+	}
+}
 func runCommand(commands []string) {
 	log.Logout("INFO", "Run", commands)
 	resConfig := &subsys.ResourceConfig{
@@ -180,29 +211,52 @@ func runCommand(commands []string) {
 		}}
 	if err := run(interactive, background, dataPersistence, name, commands, resConfig); err != nil {
 		log.Logout("ERROR", "Run image error,", err.Error())
-		return
+		os.Exit(1)
 	}
 }
 func commitCommand(image string) {
 	log.Logout("INFO", "Commit", image)
 	if err := commitContainer(image); err != nil {
 		log.Logout("ERROR", "Commit container error:", err.Error())
-		return
+		os.Exit(1)
 	}
 }
 func initCommand() {
 	if err := container.InitializeContainer(); err != nil {
 		log.Logout("ERROR", "Initialize container error:", err.Error())
-		container.GracefulExit()
+		//container.GracefulExit()
+		os.Exit(1)
 	}
 }
 func psCommand() {
 	if err := ListContainers(); err != nil {
 		log.Logout("ERROR", "List container error:", err.Error())
+		os.Exit(1)
 	}
 }
 func logCommand(container string) {
 	if err := LogContainer(container); err != nil {
 		log.Logout("ERROR", "log container error:", err.Error())
+		os.Exit(1)
+	}
+}
+func execCommand(commands []string) {
+	container := commands[0] //容器名是第一个
+	cmdArray := commands[1:] //容器名后为命令
+	if err := execContainer(container, cmdArray); err != nil {
+		log.Logout("ERROR", "exec container error:", err.Error())
+		os.Exit(1)
+	}
+}
+func stopCommand(container string) {
+	if err := stopContainer(container); err != nil {
+		log.Logout("ERROR", "stop container error:", err.Error())
+		os.Exit(1)
+	}
+}
+func rmCommand(container string) {
+	if err := rmContainer(container); err != nil {
+		log.Logout("ERROR", "remove container error:", err.Error())
+		os.Exit(1)
 	}
 }

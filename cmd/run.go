@@ -3,6 +3,7 @@ package cmd
 import (
 	"coffer/cgroups"
 	"coffer/container"
+	"coffer/log"
 	"coffer/subsys"
 	"fmt"
 	"math/rand"
@@ -30,7 +31,7 @@ func run(tty bool, background bool, volume string, containerName string,
 	if err := containerProcess.Start(); err != nil { //运行容器进程
 		return fmt.Errorf("container start error,%v", err)
 	}
-	container.Monitor(volume)
+	// container.Monitor(volume)
 	c := container.ContainerInfo{
 		Id:          id,
 		Pid:         strconv.Itoa(containerProcess.Process.Pid),
@@ -45,21 +46,24 @@ func run(tty bool, background bool, volume string, containerName string,
 	}
 	//创建cgroup manager，并通过set和apply设置资源限制
 	cgroupManager := cgroups.CgroupManager{CgroupPath: "cofferCgroup"}
+	defer cgroupManager.Destroy()                  //运行完后销毁cgroup manager
 	if err := cgroupManager.Set(res); err != nil { //设置容器限制
-		container.GracefulExit()
+		//container.GracefulExit()
 		return err
 	}
 	//将容器进程加入到各个子系统
 	if err := cgroupManager.Apply(containerProcess.Process.Pid); err != nil {
-		container.GracefulExit()
+		//container.GracefulExit()
 		return err
 	}
 	sendCommand(cmdList, writePipe) //传递命令给容器
 	if tty {
 		containerProcess.Wait() //容器进程等待容器内进程结束
 		container.DeleteInfo(id)
-		defer container.GracefulExit()
-		cgroupManager.Destroy() //运行完后销毁cgroup manager
+		container.DeleteWorkSpace(container.RootURL, container.MntURL, volume)
+		log.Logout("INFO", "Container closed")
+		os.Exit(0)
+		// defer container.GracefulExit()
 	}
 	return nil
 }
