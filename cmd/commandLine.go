@@ -20,7 +20,7 @@ var (
 	memory          string
 	cpuset_cpus     string
 	cpuset_mems     string
-	name            string
+	containerName   string
 )
 
 func init() {
@@ -35,7 +35,7 @@ func init() {
 	flag.StringVar(&memory, "memory", "", "")
 	flag.StringVar(&cpuset_cpus, "cpuset-cpus", "0", "")
 	flag.StringVar(&cpuset_mems, "cpuset-mems", "0", "")
-	flag.StringVar(&name, "name", "", "")
+	flag.StringVar(&containerName, "name", "", "")
 	flag.Usage = usage
 }
 func usage() {
@@ -46,7 +46,7 @@ Options:
 	-v,-version		Print version information
 Commands:
 	run			Run a command in a new container
-	commit		Save the contents of the running container as a image
+	commit		Create a new image from a container
 	ps			List containers
 	log			Print log of a container
 	exec		Run a command in a running container
@@ -70,8 +70,8 @@ Options:
 `)
 }
 func commitUsage() {
-	fmt.Fprintf(os.Stderr, `Usage:  coffer commit IMAGE
-Save the contents of the running container as a image
+	fmt.Fprintf(os.Stderr, `Usage:  coffer commit CONTAINER IMAGE
+Create a new image from a container
 `)
 }
 func psUsage() {
@@ -122,9 +122,9 @@ func CMDControl() {
 			} else if argument == "INiTcoNtaInER" { //内部命令，禁止外部调用
 				initCommand()
 			} else if strings.EqualFold(argument, "commit") { //commit指令
-				if flag.NArg() == 1 { //有镜像名称
-					commitCommand(flag.Args()[0])
-				} else { //commit后没有镜像名称
+				if flag.NArg() >= 2 { //有容器名称和镜像名称
+					commitCommand(flag.Args())
+				} else { //commit后缺少容器名称或镜像名称
 					helpAndErrorHandle("commit", commitUsage)
 				}
 			} else if strings.EqualFold(argument, "ps") { //ps 指令
@@ -190,18 +190,22 @@ func helpAndErrorHandle(action string, usage func()) {
 		flag.Usage = usage
 	} else {
 		switch action {
-		case "run", "commit", "log", "stop", "rm":
+		case "run", "log", "stop", "rm":
 			fmt.Printf("\"coffer run\" requires at least 1 argument.\nSee 'coffer %v -help'.\n", action)
 			log.Logout("ERROR", "Error command:No executable commands")
 		case "exec":
 			fmt.Println("\"coffer exec\" requires two parameters: container and command.\nSee 'coffer exec -help'.")
 			log.Logout("ERROR", "Error command:No container specified or executable commands")
+		case "commit":
+			fmt.Println("\"coffer exec\" requires two parameters: container name and image name.\nSee 'coffer commit -help'.")
+			log.Logout("ERROR", "Error command:No container or image specified ")
 		}
 		os.Exit(0)
 	}
 }
 func runCommand(commands []string) {
-	log.Logout("INFO", "Run", commands)
+	imageName := commands[0]
+	cmdArray := commands[1:]
 	resConfig := &subsys.ResourceConfig{
 		MemoryLimit: memory,
 		CpuShare:    cpuShare,
@@ -209,16 +213,19 @@ func runCommand(commands []string) {
 			Cpus: cpuset_cpus,
 			Mems: cpuset_mems,
 		}}
-	if err := run(interactive, background, dataPersistence, name, commands, resConfig); err != nil {
+	if err := run(interactive, background, dataPersistence, containerName, imageName, cmdArray, resConfig); err != nil {
 		log.Logout("ERROR", "Run image error,", err.Error())
 		os.Exit(1)
 	}
 }
-func commitCommand(image string) {
-	log.Logout("INFO", "Commit", image)
-	if err := commitContainer(image); err != nil {
+func commitCommand(commands []string) {
+	containerName := commands[0]
+	imageName := commands[1]
+	if err := commitContainer(containerName, imageName); err != nil {
 		log.Logout("ERROR", "Commit container error:", err.Error())
 		os.Exit(1)
+	} else {
+		log.Logout("INFO", "Commit ", containerName, " to ", imageName, " succeeded")
 	}
 }
 func initCommand() {
@@ -252,11 +259,15 @@ func stopCommand(container string) {
 	if err := stopContainer(container); err != nil {
 		log.Logout("ERROR", "stop container error:", err.Error())
 		os.Exit(1)
+	} else {
+		log.Logout("INFO", "Container stopped succeeded")
 	}
 }
 func rmCommand(container string) {
 	if err := rmContainer(container); err != nil {
 		log.Logout("ERROR", "remove container error:", err.Error())
 		os.Exit(1)
+	} else {
+		log.Logout("INFO", "Remove container succeeded")
 	}
 }

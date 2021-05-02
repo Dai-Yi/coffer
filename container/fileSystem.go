@@ -8,14 +8,14 @@ import (
 	"strings"
 )
 
-func NewWorkSpace(containerName string, volume string) error {
-	if err := createReadOnlyLayer(); err != nil {
+func NewWorkSpace(containerName string, imageName string, volume string) error {
+	if err := createReadOnlyLayer(imageName); err != nil {
 		return fmt.Errorf("create readonly layer error,%v", err)
 	}
 	if err := createWriteLayer(containerName); err != nil {
 		return fmt.Errorf("create write layer error,%v", err)
 	}
-	if err := createMountPoint(containerName); err != nil {
+	if err := createMountPoint(containerName, imageName); err != nil {
 		return fmt.Errorf("create mount point error,%v", err)
 	}
 	if volume != "" { //判断是否需要挂载数据卷
@@ -42,14 +42,15 @@ func PathExists(path string) bool {
 	}
 }
 
-//创建只读层
-func createReadOnlyLayer() error {
-	imageURL := RootURL + "busybox.tar"
-	program := RootURL + "busybox/"
+//解压.tar镜像创建只读层
+func createReadOnlyLayer(image string) error {
+	imageURL := RootURL + image + ".tar"
+	program := RootURL + image + "/"
 	if !PathExists(program) {
 		if err := os.MkdirAll(program, 0622); err != nil {
 			return fmt.Errorf("mkdir error,%v", err)
 		}
+		//func (c *Cmd) CombinedOutput() ([]byte, error)执行命令并返回标准输出和错误输出合并的切片
 		if _, err := exec.Command("tar", "-xvf", imageURL, "-C", program).CombinedOutput(); err != nil {
 			return fmt.Errorf("untar dir error,%v", err)
 		}
@@ -57,7 +58,7 @@ func createReadOnlyLayer() error {
 	return nil
 }
 
-//创建writeLayer文件夹作为容器可写层
+//为每个容器创建可写层
 func createWriteLayer(containerName string) error {
 	writeURL := fmt.Sprintf(WriteLayerURL, containerName)
 	if !PathExists(writeURL) {
@@ -69,7 +70,7 @@ func createWriteLayer(containerName string) error {
 }
 
 //创建mnt文件夹作为挂载点
-func createMountPoint(containerName string) error {
+func createMountPoint(containerName string, imageName string) error {
 	mntURL := fmt.Sprintf(MntURL, containerName)
 	if !PathExists(mntURL) {
 		if err := os.MkdirAll(mntURL, 0777); err != nil {
@@ -77,13 +78,11 @@ func createMountPoint(containerName string) error {
 		}
 	}
 	tmpWriteLayer := fmt.Sprintf(WriteLayerURL, containerName)
-	tmpImageLocation := RootURL + "busybox"
+	tmpImageLocation := RootURL + imageName
 	dirs := "dirs=" + tmpWriteLayer + ":" + tmpImageLocation
 	//把writeLayer目录和busybox目录mount到mnt
-	cmd := exec.Command("mount", "-t", "aufs", "-o", dirs, "none", mntURL)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
+	_, err := exec.Command("mount", "-t", "aufs", "-o", dirs, "none", mntURL).CombinedOutput()
+	if err != nil {
 		return fmt.Errorf("mount wirte layer and image to mnt error,%v", err)
 	}
 	return nil
@@ -107,11 +106,9 @@ func mountVolume(volumeURLs []string, containerName string) error {
 		}
 	}
 	dirs := "dirs=" + hostURL
-	cmd := exec.Command("mount", "-t", "aufs", "-o", dirs, "none", containerVolumeURL)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("run mount command error,%v", err)
+	_, err := exec.Command("mount", "-t", "aufs", "-o", dirs, "none", containerVolumeURL).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("run mount volume command error,%v", err)
 	}
 	return nil
 }
@@ -139,10 +136,7 @@ func DeleteWorkSpace(volume string, contaienrName string) error {
 func deleteVolume(volumeURLs []string, containerName string) error {
 	mntURL := fmt.Sprintf(MntURL, containerName)
 	containerURL := mntURL + volumeURLs[1]
-	cmd := exec.Command("umount", containerURL)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
+	if _, err := exec.Command("umount", containerURL).CombinedOutput(); err != nil {
 		return fmt.Errorf("run umount volume commnad error,%v", err)
 	}
 	return nil
@@ -151,10 +145,8 @@ func deleteVolume(volumeURLs []string, containerName string) error {
 //卸载容器文件系统挂载点
 func deleteMountPoint(containerName string) error {
 	mntURL := fmt.Sprintf(MntURL, containerName)
-	cmd := exec.Command("umount", mntURL)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	if err := cmd.Run(); err != nil {
+	_, err := exec.Command("umount", mntURL).CombinedOutput()
+	if err != nil {
 		return fmt.Errorf("run umount mnt command error,%v", err)
 	}
 	if PathExists(mntURL) {

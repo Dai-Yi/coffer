@@ -11,7 +11,7 @@ import (
 	"syscall"
 )
 
-func NewProcess(tty bool, volume string, name string) (*exec.Cmd, *os.File) { //创建容器进程
+func NewProcess(tty bool, volume string, containerName string, imageName string) (*exec.Cmd, *os.File) { //创建容器进程
 	readPipe, writePipe, err := os.Pipe() //创建管道用于传递命令给容器
 	if err != nil {                       //管道创建失败
 		log.Logout("ERROR", "New pipe error "+err.Error())
@@ -31,7 +31,7 @@ func NewProcess(tty bool, volume string, name string) (*exec.Cmd, *os.File) { //
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 	} else { //不交互则默认输出到log文件
-		dirURL := fmt.Sprintf(DefaultInfoLocation, name)
+		dirURL := fmt.Sprintf(DefaultInfoLocation, containerName)
 		if !PathExists(dirURL) {
 			if err := os.MkdirAll(dirURL, 0622); err != nil {
 				log.Logout("ERROR", "Container process mkdir error,", err.Error())
@@ -47,8 +47,8 @@ func NewProcess(tty bool, volume string, name string) (*exec.Cmd, *os.File) { //
 		cmd.Stdout = stdLogFile
 	}
 	cmd.ExtraFiles = []*os.File{readPipe} //附加管道文件读取端，使容器能够读取管道传入的命令
-	cmd.Dir = fmt.Sprintf(MntURL, name)
-	if err := NewWorkSpace(name, volume); err != nil {
+	cmd.Dir = fmt.Sprintf(MntURL, containerName)
+	if err := NewWorkSpace(containerName, imageName, volume); err != nil {
 		log.Logout("ERROR", "Create new work space error:", err.Error())
 		return nil, nil
 	}
