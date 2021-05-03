@@ -19,13 +19,15 @@ func sendCommand(cmdList []string, writePipe *os.File) {
 	writePipe.Close()              //关闭写入端
 }
 func run(tty bool, background bool, volume string, containerName string, imageName string,
-	cmdList []string, res *subsys.ResourceConfig) error { //run命令
+	cmdList []string, environment string, res *subsys.ResourceConfig) error { //run命令
 	id := idGenerator() //生成10位id
 	if containerName == "" {
 		containerName = id
 	}
-	containerProcess, writePipe := container.NewProcess(tty, volume, containerName, imageName) //首先创建容器进程和管道
-	if containerProcess == nil {                                                               //容器创建失败
+	env := strings.Split(environment, "") //根据空格拆分为多个用户定义的环境变量
+	//创建容器进程和管道
+	containerProcess, writePipe := container.NewProcess(tty, volume, env, containerName, imageName)
+	if containerProcess == nil { //容器创建失败
 		return fmt.Errorf("create new container error")
 	}
 	if err := containerProcess.Start(); err != nil { //运行容器进程

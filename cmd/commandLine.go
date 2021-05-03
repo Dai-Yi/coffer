@@ -10,7 +10,21 @@ import (
 	"strings"
 )
 
+type env []string //自定义env类型
+func (e *env) String() string { //Value.String接口实现
+	r := []string{}
+	for _, s := range *e {
+		r = append(r, s)
+	}
+	return strings.Join(r, " ")
+}
+func (e *env) Set(s string) error { //Value.Set接口实现
+	*e = append(*e, s)
+	return nil
+}
+
 var (
+	environment     flag.Value = &env{}
 	help            bool
 	version         bool
 	interactive     bool
@@ -24,6 +38,7 @@ var (
 )
 
 func init() {
+	flag.Var(environment, "e", "")
 	flag.BoolVar(&help, "h", false, "") //不用flag自带usage
 	flag.BoolVar(&help, "help", false, "")
 	flag.BoolVar(&version, "v", false, "")
@@ -67,6 +82,7 @@ Options:
 	-cpuset-cpus		CPUs in which to allow execution
 	-cpuset-mems		MEMs in which to allow execution
 	-name			Assign a name to the container
+	-e			Set environment variables(can be used multiple times at one time)
 `)
 }
 func commitUsage() {
@@ -213,7 +229,8 @@ func runCommand(commands []string) {
 			Cpus: cpuset_cpus,
 			Mems: cpuset_mems,
 		}}
-	if err := run(interactive, background, dataPersistence, containerName, imageName, cmdArray, resConfig); err != nil {
+	if err := run(interactive, background, dataPersistence,
+		containerName, imageName, cmdArray, environment.String(), resConfig); err != nil {
 		log.Logout("ERROR", "Run image error,", err.Error())
 		os.Exit(1)
 	}

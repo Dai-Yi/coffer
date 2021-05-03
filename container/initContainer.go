@@ -11,7 +11,7 @@ import (
 	"syscall"
 )
 
-func NewProcess(tty bool, volume string, containerName string, imageName string) (*exec.Cmd, *os.File) { //创建容器进程
+func NewProcess(tty bool, volume string, environment []string, containerName string, imageName string) (*exec.Cmd, *os.File) { //创建容器进程
 	readPipe, writePipe, err := os.Pipe() //创建管道用于传递命令给容器
 	if err != nil {                       //管道创建失败
 		log.Logout("ERROR", "New pipe error "+err.Error())
@@ -46,7 +46,8 @@ func NewProcess(tty bool, volume string, containerName string, imageName string)
 		}
 		cmd.Stdout = stdLogFile
 	}
-	cmd.ExtraFiles = []*os.File{readPipe} //附加管道文件读取端，使容器能够读取管道传入的命令
+	cmd.ExtraFiles = []*os.File{readPipe}          //附加管道文件读取端，使容器能够读取管道传入的命令
+	cmd.Env = append(os.Environ(), environment...) //将环境变量添加上用户自定义环境变量
 	cmd.Dir = fmt.Sprintf(MntURL, containerName)
 	if err := NewWorkSpace(containerName, imageName, volume); err != nil {
 		log.Logout("ERROR", "Create new work space error:", err.Error())
