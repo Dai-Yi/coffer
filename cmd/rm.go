@@ -3,7 +3,6 @@ package cmd
 import (
 	"coffer/container"
 	"fmt"
-	"os"
 )
 
 //删除容器
@@ -17,12 +16,7 @@ func rmContainer(containerName string) error {
 	if containerInfo.Status != container.STOP {
 		return fmt.Errorf("couldn't remove running container")
 	}
-	//找到对应存储容器信息的文件路径
-	dirURL := fmt.Sprintf(container.DefaultInfoLocation, containerName)
-	//移除所有信息
-	if err := os.RemoveAll(dirURL); err != nil {
-		return fmt.Errorf("remove file %s error %v", dirURL, err)
-	}
+	container.DeleteInfo(containerName)
 	container.DeleteWorkSpace(containerInfo.Volume, containerName)
 	return nil
 }

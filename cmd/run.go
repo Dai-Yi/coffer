@@ -25,7 +25,6 @@ func run(tty bool, volume string, containerName string, imageName string,
 		containerName = id
 	}
 	env := strings.Split(environment, ",") //根据空格拆分为多个用户定义的环境变量
-	log.Logout("DEBUG", "envSlice:", env)
 	//创建容器进程和管道
 	containerProcess, writePipe := container.NewProcess(tty, volume, env, containerName, imageName)
 	if containerProcess == nil { //容器创建失败
