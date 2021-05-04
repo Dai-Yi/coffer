@@ -16,7 +16,7 @@ func (e *env) String() string { //Value.String接口实现
 	for _, s := range *e {
 		r = append(r, s)
 	}
-	return strings.Join(r, " ")
+	return strings.Join(r, ",")
 }
 func (e *env) Set(s string) error { //Value.Set接口实现
 	*e = append(*e, s)
@@ -228,8 +228,9 @@ func runCommand(commands []string) {
 		Cpuset: &subsys.CpuSet{
 			Cpus: cpuset_cpus,
 			Mems: cpuset_mems,
-		}}
-	if err := run(interactive, background, dataPersistence,
+		},
+	}
+	if err := run(interactive, dataPersistence,
 		containerName, imageName, cmdArray, environment.String(), resConfig); err != nil {
 		log.Logout("ERROR", "Run image error,", err.Error())
 		os.Exit(1)

@@ -59,9 +59,11 @@ func StoreInfo(c ContainerInfo) error {
 }
 
 //删除容器信息
-func DeleteInfo(containerId string) {
-	dirURL := fmt.Sprintf(DefaultInfoLocation, containerId) //拼接路径
-	if err := os.RemoveAll(dirURL); err != nil {
-		log.Logout("ERROR", "Remove dir error ", err)
+func DeleteInfo(containerName string) {
+	dirURL := fmt.Sprintf(DefaultInfoLocation, containerName) //拼接路径
+	if PathExists(dirURL) {                                   //如果没有就不用删了
+		if err := os.RemoveAll(dirURL); err != nil {
+			log.Logout("ERROR", "Remove dir error ", err)
+		}
 	}
 }

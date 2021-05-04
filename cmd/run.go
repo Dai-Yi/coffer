@@ -18,13 +18,14 @@ func sendCommand(cmdList []string, writePipe *os.File) {
 	writePipe.WriteString(command) //命令写入管道
 	writePipe.Close()              //关闭写入端
 }
-func run(tty bool, background bool, volume string, containerName string, imageName string,
+func run(tty bool, volume string, containerName string, imageName string,
 	cmdList []string, environment string, res *subsys.ResourceConfig) error { //run命令
 	id := idGenerator() //生成10位id
 	if containerName == "" {
 		containerName = id
 	}
-	env := strings.Split(environment, "") //根据空格拆分为多个用户定义的环境变量
+	env := strings.Split(environment, ",") //根据空格拆分为多个用户定义的环境变量
+	log.Logout("DEBUG", "envSlice:", env)
 	//创建容器进程和管道
 	containerProcess, writePipe := container.NewProcess(tty, volume, env, containerName, imageName)
 	if containerProcess == nil { //容器创建失败
@@ -61,7 +62,7 @@ func run(tty bool, background bool, volume string, containerName string, imageNa
 	sendCommand(cmdList, writePipe) //传递命令给容器
 	if tty {
 		containerProcess.Wait() //容器进程等待容器内进程结束
-		container.DeleteInfo(id)
+		container.DeleteInfo(containerName)
 		container.DeleteWorkSpace(volume, containerName)
 		log.Logout("INFO", "Container closed")
 		os.Exit(0)
