@@ -33,7 +33,6 @@ func run(tty bool, volume string, containerName string, imageName string,
 	if err := containerProcess.Start(); err != nil { //运行容器进程
 		return fmt.Errorf("container start error,%v", err)
 	}
-	// container.Monitor(volume)
 	c := container.ContainerInfo{
 		Id:          id,
 		Pid:         strconv.Itoa(containerProcess.Process.Pid),
@@ -50,12 +49,10 @@ func run(tty bool, volume string, containerName string, imageName string,
 	cgroupManager := cgroups.CgroupManager{CgroupPath: "cofferCgroup"}
 	defer cgroupManager.Destroy()                  //运行完后销毁cgroup manager
 	if err := cgroupManager.Set(res); err != nil { //设置容器限制
-		//container.GracefulExit()
 		return err
 	}
 	//将容器进程加入到各个子系统
 	if err := cgroupManager.Apply(containerProcess.Process.Pid); err != nil {
-		//container.GracefulExit()
 		return err
 	}
 	sendCommand(cmdList, writePipe) //传递命令给容器
@@ -65,7 +62,6 @@ func run(tty bool, volume string, containerName string, imageName string,
 		container.DeleteWorkSpace(volume, containerName)
 		log.Logout("INFO", "Container closed")
 		os.Exit(0)
-		// defer container.GracefulExit()
 	}
 	return nil
 }
