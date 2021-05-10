@@ -1,8 +1,8 @@
 package container
 
 import (
-	"coffer/log"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -24,7 +24,8 @@ func NewWorkSpace(containerName string, imageName string, volume string) error {
 			if err := mountVolume(volumeURLs, containerName); err != nil {
 				return fmt.Errorf("mount volume error,%v", err)
 			}
-			log.Logout("INFO", "New work space volume URLs: ", volumeURLs)
+			log.SetPrefix("[INFO]")
+			log.Println("New work space volume URLs: ", volumeURLs)
 		} else {
 			return fmt.Errorf("volume parameter input error")
 		}

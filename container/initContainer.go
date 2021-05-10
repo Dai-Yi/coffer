@@ -1,9 +1,9 @@
 package container
 
 import (
-	"coffer/log"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,11 +11,10 @@ import (
 	"syscall"
 )
 
-func NewProcess(tty bool, volume string, environment []string, containerName string, imageName string) (*exec.Cmd, *os.File) { //创建容器进程
+func NewProcess(tty bool, volume string, environment []string, containerName string, imageName string) (*exec.Cmd, *os.File, error) { //创建容器进程
 	readPipe, writePipe, err := os.Pipe() //创建管道用于传递命令给容器
 	if err != nil {                       //管道创建失败
-		log.Logout("ERROR", "New pipe error "+err.Error())
-		return nil, nil
+		return nil, nil, fmt.Errorf("new pipe error,%v", err)
 	}
 	cmd := exec.Command("/proc/self/exe", "INiTcoNtaInER") //调用自身，创建容器进程
 	cmd.SysProcAttr = &syscall.SysProcAttr{                //使用namespace隔离
@@ -34,15 +33,13 @@ func NewProcess(tty bool, volume string, environment []string, containerName str
 		dirURL := fmt.Sprintf(DefaultInfoLocation, containerName)
 		if !PathExists(dirURL) {
 			if err := os.MkdirAll(dirURL, 0622); err != nil {
-				log.Logout("ERROR", "Container process mkdir error,", err.Error())
-				return nil, nil
+				return nil, nil, fmt.Errorf("container process mkdir error,%v", err)
 			}
 		}
 		stdLogFilePath := dirURL + ContainerLogFile
 		stdLogFile, err := os.Create(stdLogFilePath)
 		if err != nil {
-			log.Logout("ERROR", "Container process create log file error", err.Error())
-			return nil, nil
+			return nil, nil, fmt.Errorf("container process create log file error,%v", err)
 		}
 		cmd.Stdout = stdLogFile
 	}
@@ -50,24 +47,25 @@ func NewProcess(tty bool, volume string, environment []string, containerName str
 	cmd.Env = append(os.Environ(), environment...) //将环境变量添加上用户自定义环境变量
 	cmd.Dir = fmt.Sprintf(MntURL, containerName)
 	if err := NewWorkSpace(containerName, imageName, volume); err != nil {
-		log.Logout("ERROR", "Create new work space error:", err.Error())
-		return nil, nil
+		return nil, nil, fmt.Errorf("create new work space error,%v", err)
 	}
-	return cmd, writePipe
+	return cmd, writePipe, nil
 }
 
-func receiveCommand() []string {
+func receiveCommand() ([]string, error) {
 	pipe := os.NewFile(uintptr(3), "pipe") //从文件描述符获取管道
 	msg, err := ioutil.ReadAll(pipe)
 	if err != nil {
-		log.Logout("ERROR", "Init read pipe error "+err.Error())
-		return nil
+		return nil, fmt.Errorf("init read pipe error,%v", err)
 	}
 	msgStr := string(msg)
-	return strings.Split(msgStr, " ")
+	return strings.Split(msgStr, " "), nil
 }
 func InitializeContainer() error { //容器内部初始化
-	cmdList := receiveCommand() //从管道读取到命令
+	cmdList, err := receiveCommand() //从管道读取到命令
+	if err != nil {
+		return fmt.Errorf("receive command error,%v", err)
+	}
 	if len(cmdList) == 0 {
 		return fmt.Errorf("run container get user command error,command list is empty")
 	}
@@ -90,7 +88,8 @@ func setMount() error {
 	if err != nil {
 		return fmt.Errorf("get current location error,%v", err)
 	}
-	log.Logout("INFO", "Current location:", pwd)
+	log.SetPrefix("[INFO]")
+	log.Println("Current location:", pwd)
 	if err = changeRoot(pwd); err != nil {
 		return fmt.Errorf("change root mount error,%v", err)
 	}

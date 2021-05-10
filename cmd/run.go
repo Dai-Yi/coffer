@@ -3,9 +3,9 @@ package cmd
 import (
 	"coffer/cgroups"
 	"coffer/container"
-	"coffer/log"
 	"coffer/subsys"
 	"fmt"
+	"log"
 	"math/rand"
 	"os"
 	"strconv"
@@ -26,9 +26,9 @@ func run(tty bool, volume string, containerName string, imageName string,
 	}
 	env := strings.Split(environment, ",") //根据空格拆分为多个用户定义的环境变量
 	//创建容器进程和管道
-	containerProcess, writePipe := container.NewProcess(tty, volume, env, containerName, imageName)
-	if containerProcess == nil { //容器创建失败
-		return fmt.Errorf("create new container error")
+	containerProcess, writePipe, err := container.NewProcess(tty, volume, env, containerName, imageName)
+	if err != nil { //容器创建失败
+		return fmt.Errorf("create new container error,%v", err)
 	}
 	if err := containerProcess.Start(); err != nil { //运行容器进程
 		return fmt.Errorf("container start error,%v", err)
@@ -60,7 +60,8 @@ func run(tty bool, volume string, containerName string, imageName string,
 		containerProcess.Wait() //容器进程等待容器内进程结束
 		container.DeleteInfo(containerName)
 		container.DeleteWorkSpace(volume, containerName)
-		log.Logout("INFO", "Container closed")
+		log.SetPrefix("[INFO]")
+		log.Println("Container closed")
 		os.Exit(0)
 	}
 	return nil

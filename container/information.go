@@ -1,13 +1,13 @@
 package container
 
 import (
-	"coffer/log"
 	"encoding/json"
 	"fmt"
+	"log"
 	"os"
 )
 
-var (
+const (
 	RUNNING             string = "running"
 	STOP                string = "stopped"
 	Exit                string = "exited"
@@ -63,7 +63,8 @@ func DeleteInfo(containerName string) {
 	dirURL := fmt.Sprintf(DefaultInfoLocation, containerName) //拼接路径
 	if PathExists(dirURL) {                                   //如果没有就不用删了
 		if err := os.RemoveAll(dirURL); err != nil {
-			log.Logout("ERROR", "Remove dir error ", err)
+			log.SetPrefix("[ERROR]")
+			log.Println("Remove dir error ", err)
 		}
 	}
 }

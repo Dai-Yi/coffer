@@ -2,10 +2,10 @@ package cmd
 
 import (
 	"coffer/container"
-	"coffer/log"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"text/tabwriter"
 )
@@ -31,7 +31,8 @@ func ListContainers() error {
 		//根据容器配置文件获取对应信息,转换为容器信息对象
 		tmpContainer, err := getContainerInfo(file)
 		if err != nil { //有读取不出来的就跳过
-			log.Logout("ERROR", "Get container info error,", err)
+			log.SetPrefix("[ERROR]")
+			log.Println("Get container info error,", err)
 			continue
 		}
 		containers = append(containers, tmpContainer)

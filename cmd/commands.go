@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"coffer/container"
-	"coffer/log"
 	"coffer/subsys"
 	"fmt"
+	"log"
 	"os"
 )
 
@@ -82,7 +82,8 @@ func (commit *commitCommand) execute(nonFlagNum int, argument []string) error {
 	if err := commitContainer(containerName, imageName); err != nil {
 		return fmt.Errorf("commit container error:%v", err)
 	} else {
-		log.Logout("INFO", "Commit ", containerName, " to ", imageName, " succeeded")
+		log.SetPrefix("[INFO]")
+		log.Println("Commit ", containerName, " to ", imageName, " succeeded")
 	}
 	return nil
 }
@@ -133,7 +134,8 @@ Run a command in a running container
 func (exec *execCommand) execute(nonFlagNum int, argument []string) error {
 	//若已经指定了环境变量,说明C代码已经运行,直接返回以免重复调用
 	if os.Getenv(ENV_EXEC_PID) != "" {
-		log.Logout("INFO", "pid callback,pid:", os.Getegid())
+		log.SetPrefix("[INFO]")
+		log.Println("pid callback,pid:", os.Getegid())
 		return nil
 	}
 	if nonFlagNum < 2 { //exec后缺少容器名或命令
@@ -163,7 +165,8 @@ func (stop *stopCommand) execute(nonFlagNum int, argument []string) error {
 	if err := stopContainer(argument[0]); err != nil {
 		return fmt.Errorf("stop container error:%v", err)
 	} else {
-		log.Logout("INFO", "Container stopped succeeded")
+		log.SetPrefix("[INFO]")
+		log.Println("Container stopped succeeded")
 	}
 	return nil
 }
@@ -183,7 +186,8 @@ func (rm *rmCommand) execute(nonFlagNum int, argument []string) error {
 	if err := rmContainer(argument[0]); err != nil {
 		return fmt.Errorf("remove container error:%v", err)
 	} else {
-		log.Logout("INFO", "Remove container succeeded")
+		log.SetPrefix("[INFO]")
+		log.Println("Remove container succeeded")
 	}
 	return nil
 }

@@ -2,9 +2,9 @@ package net
 
 import (
 	"coffer/container"
-	"coffer/log"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -193,7 +193,8 @@ func Init() error {
 		networks[nwName] = nw
 		return nil
 	})
-	log.Logout("INFO", "networks:", networks)
+	log.SetPrefix("[INFO]")
+	log.Println("networks:", networks)
 	return nil
 }
 
@@ -202,7 +203,8 @@ func enterContainerNetns(enLink *netlink.Link, cinfo *container.ContainerInfo) f
 	//找到容器的net Namespace
 	f, err := os.OpenFile(fmt.Sprintf("/proc/%s/ns/net", cinfo.Pid), os.O_RDONLY, 0)
 	if err != nil {
-		log.Logout("ERROR", "error get container net namespace, %v", err)
+		log.SetPrefix("[ERROR]")
+		log.Println("Error get container net namespace:", err.Error())
 	}
 	//取到文件描述符
 	nsFD := f.Fd()
@@ -210,16 +212,19 @@ func enterContainerNetns(enLink *netlink.Link, cinfo *container.ContainerInfo) f
 	runtime.LockOSThread()
 	// 修改veth peer 另外一端移到容器的namespace中
 	if err = netlink.LinkSetNsFd(*enLink, int(nsFD)); err != nil {
-		log.Logout("ERROR", "error set link netns , %v", err)
+		log.SetPrefix("[ERROR]")
+		log.Println("Error set link netns:", err.Error())
 	}
 	// 获取当前的网络namespace
 	origns, err := netns.Get()
 	if err != nil {
-		log.Logout("ERROR", "error get current netns, %v", err)
+		log.SetPrefix("[ERROR]")
+		log.Println("Error get current netns:", err.Error())
 	}
 	// 设置当前进程到新的网络namespace，并在函数执行完成之后再恢复到之前的namespace
 	if err = netns.Set(netns.NsHandle(nsFD)); err != nil {
-		log.Logout("ERROR", "error set netns, %v", err)
+		log.SetPrefix("[ERROR]")
+		log.Println("Error set netns", err.Error())
 	}
 	//返回之前net Namespace的函数
 	return func() {
@@ -276,7 +281,8 @@ func configPortMapping(ep *Endpoint, cinfo *container.ContainerInfo) error {
 		//分隔成宿主机的端口和容器的端口
 		portMapping := strings.Split(pm, ":")
 		if len(portMapping) != 2 {
-			log.Logout("ERROR", "port mapping format error, %v", pm)
+			log.SetPrefix("ERROR")
+			log.Println("Port mapping format error:", pm)
 			continue
 		}
 		//调用命令配置iptables
@@ -286,7 +292,8 @@ func configPortMapping(ep *Endpoint, cinfo *container.ContainerInfo) error {
 		//执行iptables命令,添加端口映射转发规则
 		output, err := cmd.Output()
 		if err != nil {
-			log.Logout("ERROR", "iptables Output, %v", output)
+			log.SetPrefix("ERROR")
+			log.Println("Iptables Output", output)
 			continue
 		}
 	}
