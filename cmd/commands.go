@@ -2,7 +2,9 @@ package cmd
 
 import (
 	"coffer/container"
+	"coffer/net"
 	"coffer/subsys"
+	"flag"
 	"fmt"
 	"log"
 	"os"
@@ -190,4 +192,97 @@ func (rm *rmCommand) execute(nonFlagNum int, argument []string) error {
 		log.Println("Remove container succeeded")
 	}
 	return nil
+}
+
+type networkCommand struct{}
+
+func (network *networkCommand) usage() {
+	fmt.Fprintf(os.Stderr, `Usage:  coffer network COMMAND
+Manage network
+Commands:
+	create			Create a container network
+	list			List container network
+	remove			Remove container network
+Run 'coffer network COMMAND -help' for more information on a command.
+`)
+}
+func (network *networkCommand) execute(_ int, _ []string) error {
+	if len(os.Args) <= 1 { //未输入参数
+		return fmt.Errorf("missing Command, enter -h or -help to show network usage")
+	}
+	netArgument := os.Args[1] //保存命令
+	os.Args = os.Args[1:]     //删除阻碍解析的network命令
+	flag.Parse()              //network存在子命令，需要多解析一次
+	switch netArgument {
+	case "create":
+		if flag.NArg() >= 1 { //有网络名
+			if err := net.Init(); err != nil { //初始化网络
+				return fmt.Errorf("initialize network error,%v", err)
+			}
+			err := net.CreateNetwork(driver, subnet, flag.Args()[0]) //创建网络
+			if err != nil {
+				return fmt.Errorf("create network error: %+v", err)
+			}
+			return nil
+		} else { //create后没有网络名
+			if !help {
+				fmt.Println("requires at least 1 argument.\nSee 'coffer network create -help'.")
+				return fmt.Errorf("error command:No network name")
+			}
+			flag.Usage = networkCreateUsage
+		}
+	case "list":
+		if flag.NArg() >= 1 { //有非flag参数
+			fmt.Println("there are redundant parameters.\nSee 'coffer network list -help'.")
+			return fmt.Errorf("error command:Redundant commands")
+		} else {
+			if help {
+				flag.Usage = networkListUsage
+			} else {
+				if err := net.Init(); err != nil { //初始化网络
+					return fmt.Errorf("initialize network error,%v", err)
+				}
+				if err := net.ListNetwork(); err != nil { //显示网络列表
+					return fmt.Errorf("list network error,%v", err)
+				}
+			}
+		}
+	case "remove":
+		if flag.NArg() >= 1 { //有待运行程序
+			if err := net.Init(); err != nil { //初始化网络
+				return fmt.Errorf("initialize network error,%v", err)
+			}
+			if err := net.DeleteNetwork(flag.Args()[0]); err != nil {
+				return fmt.Errorf("remove network error,%v", err)
+			}
+		} else { //remove后没有可执行程序
+			if !help {
+				fmt.Println("requires at least 1 argument.\nSee 'coffer network remove -help'.")
+				return fmt.Errorf("error command:No network name")
+			}
+			flag.Usage = networkRemoveUsage
+		}
+	}
+	if help {
+		flag.Usage()
+	}
+	return nil
+}
+func networkCreateUsage() {
+	fmt.Fprintf(os.Stderr, `Usage:  coffer network create [OPTIONS] NETWORK
+Options:
+	-driver			Driver to manage the Network (default "bridge")
+	-subnet			Subnet in CIDR format that represents a network segment
+`)
+}
+func networkListUsage() {
+	fmt.Fprintf(os.Stderr, `Usage:  coffer network list
+List container network
+`)
+}
+
+func networkRemoveUsage() {
+	fmt.Fprintf(os.Stderr, `Usage:  coffer network remove NETWORK
+Remove container network
+`)
 }

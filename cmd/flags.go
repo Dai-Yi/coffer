@@ -22,6 +22,17 @@ func (e *env) Set(s string) error { //Value.Set接口实现
 }
 
 var (
+	instructionOperation = map[string]command{ //指令集，实现新指令需添加到之内
+		"run":           &runCommand{},
+		"INiTcoNtaInER": &initCommand{},
+		"commit":        &commitCommand{},
+		"ps":            &psCommand{},
+		"log":           &logCommand{},
+		"exec":          &execCommand{},
+		"stop":          &stopCommand{},
+		"rm":            &rmCommand{},
+		"network":       &networkCommand{},
+	}
 	environment     flag.Value //自定义Value类型
 	help            bool
 	version         bool
@@ -33,9 +44,13 @@ var (
 	cpuset_cpus     string
 	cpuset_mems     string
 	containerName   string
+
+	driver string
+	subnet string
 )
 
 func init() {
+	flag.Usage = defaultusage
 	environment = &env{} //实现flag.Value接口
 	flag.Var(environment, "e", "")
 	flag.BoolVar(&help, "h", false, "") //不用flag自带usage
@@ -50,7 +65,9 @@ func init() {
 	flag.StringVar(&cpuset_cpus, "cpuset-cpus", "0", "")
 	flag.StringVar(&cpuset_mems, "cpuset-mems", "0", "")
 	flag.StringVar(&containerName, "name", "", "")
-	flag.Usage = defaultusage
+	//network子命令参数
+	flag.StringVar(&driver, "driver", "", "")
+	flag.StringVar(&subnet, "subnet", "", "")
 }
 func defaultusage() {
 	fmt.Fprintf(os.Stderr, `Usage:	coffer [OPTIONS] COMMAND
@@ -58,6 +75,8 @@ func defaultusage() {
 Options:
 	-h,-help		Print usage
 	-v,-version		Print version information
+Management Commands:
+	network			Container network commands
 Commands:
 	run			Run a command in a new container
 	commit		Create a new image from a container
@@ -66,28 +85,18 @@ Commands:
 	exec		Run a command in a running container
 	stop		Stop the running container
 	rm			Remove the stopped container
-Run 'coffer COMMAND -h' for more information on a command
+Run 'coffer COMMAND -help' for more information on a command
 `)
 }
 
 func CMDControl() {
-	instructionOperation := map[string]command{
-		"run":           &runCommand{},
-		"INiTcoNtaInER": &initCommand{},
-		"commit":        &commitCommand{},
-		"ps":            &psCommand{},
-		"log":           &logCommand{},
-		"exec":          &execCommand{},
-		"stop":          &stopCommand{},
-		"rm":            &rmCommand{},
-	}
 	if len(os.Args) <= 1 { //未输入参数
 		log.SetPrefix("[ERROR]")
 		log.Println("Missing Command, enter -h or -help to show usage")
 		return
 	}
 	flag.Parse()          //第一次解析，解析help、version参数
-	if flag.NArg() >= 1 { //可能有命令,run,commit
+	if flag.NArg() >= 1 { //可能有命令,run,commit等
 		argument := os.Args[1] //保存命令
 		os.Args = os.Args[1:]  //删除阻碍解析的coffer命令
 		flag.Parse()           //第二次解析，解析命令参数
