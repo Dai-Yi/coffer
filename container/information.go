@@ -35,25 +35,25 @@ func StoreInfo(c ContainerInfo) error {
 	//将容器信息化为字符串
 	jsonBytes, err := json.Marshal(c)
 	if err != nil {
-		return fmt.Errorf("record container info error,%v", err)
+		return fmt.Errorf("record container info error->%v", err)
 	}
 	jsonString := string(jsonBytes)
 	dirURL := fmt.Sprintf(DefaultInfoLocation, c.Name) //string拼接成路径
 	if !PathExists(dirURL) {                           //如果路径不存在则创建
 		if err := os.MkdirAll(dirURL, 0622); err != nil {
-			return fmt.Errorf("mkdir error,%v", err)
+			return fmt.Errorf("mkdir error->%v", err)
 		}
 	}
 	//创建json文件
 	jsonfile := dirURL + ConfigFile
 	file, err := os.Create(jsonfile)
 	if err != nil {
-		return fmt.Errorf("create json file error,%v", err)
+		return fmt.Errorf("create json file error->%v", err)
 	}
 	defer file.Close()
 	//将json化之后的数据写入文件
 	if _, err := file.WriteString(jsonString); err != nil {
-		return fmt.Errorf("write file error,%v", err)
+		return fmt.Errorf("write file error->%v", err)
 	}
 	return nil
 }
@@ -64,7 +64,7 @@ func DeleteInfo(containerName string) {
 	if PathExists(dirURL) {                                   //如果没有就不用删了
 		if err := os.RemoveAll(dirURL); err != nil {
 			log.SetPrefix("[ERROR]")
-			log.Println("Remove dir error ", err)
+			log.Println("Remove dir error->", err)
 		}
 	}
 }

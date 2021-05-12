@@ -17,9 +17,10 @@ type command interface { //指令接口,所有指令都需要实现以下接口
 
 type runCommand struct{}
 
-func (run *runCommand) usage() {
+func (*runCommand) usage() {
 	fmt.Fprintf(os.Stderr, `Usage:	coffer run [OPTIONS] IMAGE [COMMAND]
-Run a command in a new container
+Run a command in a new container.
+
 Options:
 	-i			Make the app interactive:attach STDIN,STDOUT,STDERR
 	-p			Bind mount a data volume(Data Persistence)
@@ -32,13 +33,13 @@ Options:
 	-e			Set environment variables(can be used multiple times at one time)
 `)
 }
-func (run1 *runCommand) execute(nonFlagNum int, argument []string) error {
+func (*runCommand) execute(nonFlagNum int, argument []string) error {
 	if background && interactive { //后台运行与可交互不能同时执行
 		return fmt.Errorf("application interaction(-i) and background running(-b) cannot be used at the same time")
 	}
-	if nonFlagNum < 1 { //run后没有可执行程序
-		fmt.Printf("\"coffer run\" requires at least 1 argument.\nSee 'coffer run -help'.\n")
-		return fmt.Errorf("error command:No executable commands")
+	if nonFlagNum < 2 { //run后没有可执行程序和命令
+		fmt.Printf("\"coffer run\" requires two parameters: image name and command.\nSee 'coffer run -help'.\n")
+		return fmt.Errorf("error command:No image name or executable commands")
 	}
 	imageName := argument[0]
 	cmdArray := argument[1:]
@@ -50,39 +51,40 @@ func (run1 *runCommand) execute(nonFlagNum int, argument []string) error {
 			Mems: cpuset_mems,
 		},
 	}
-	if err := run(interactive, dataPersistence,
-		containerName, imageName, cmdArray, environment.String(), resConfig); err != nil {
-		return fmt.Errorf("run image error,%v", err)
+	if err := run(interactive, dataPersistence, containerName, imageName, network,
+		cmdArray, environment.String(), portmapping.String(), resConfig); err != nil {
+		return fmt.Errorf("run image error->%v", err)
 	}
 	return nil
 }
 
 type initCommand struct{}
 
-func (init *initCommand) usage() {}
-func (init *initCommand) execute(nonFlagNum int, argument []string) error {
+func (*initCommand) usage() {}
+func (*initCommand) execute(nonFlagNum int, argument []string) error {
 	if err := container.InitializeContainer(); err != nil {
-		return fmt.Errorf("initialize container error:%v", err)
+		return fmt.Errorf("initialize container error->%v", err)
 	}
 	return nil
 }
 
 type commitCommand struct{}
 
-func (commit *commitCommand) usage() {
+func (*commitCommand) usage() {
 	fmt.Fprintf(os.Stderr, `Usage:  coffer commit CONTAINER IMAGE
-Create a new image from a container
+Create a new image from a container.
+
 `)
 }
-func (commit *commitCommand) execute(nonFlagNum int, argument []string) error {
+func (*commitCommand) execute(nonFlagNum int, argument []string) error {
 	if nonFlagNum < 2 { //commit后缺少容器名称或镜像名称
-		fmt.Println("\"coffer exec\" requires two parameters: container name and image name.\nSee 'coffer commit -help'.")
+		fmt.Println("\"coffer commit\" requires two parameters: container name and image name.\nSee 'coffer commit -help'.")
 		return fmt.Errorf("error command:No container or image specified")
 	}
 	containerName := argument[0]
 	imageName := argument[1]
 	if err := commitContainer(containerName, imageName); err != nil {
-		return fmt.Errorf("commit container error:%v", err)
+		return fmt.Errorf("commit container error->%v", err)
 	} else {
 		log.SetPrefix("[INFO]")
 		log.Println("Commit ", containerName, " to ", imageName, " succeeded")
@@ -92,48 +94,51 @@ func (commit *commitCommand) execute(nonFlagNum int, argument []string) error {
 
 type psCommand struct{}
 
-func (ps *psCommand) usage() {
+func (*psCommand) usage() {
 	fmt.Fprintf(os.Stderr, `Usage:	coffer ps
-List containers
+List containers.
+
 `)
 }
-func (ps *psCommand) execute(nonFlagNum int, argument []string) error {
+func (*psCommand) execute(nonFlagNum int, argument []string) error {
 	if nonFlagNum >= 1 { //有非flag参数
 		fmt.Println("there are redundant parameters.\nSee 'coffer ps -help'.")
 		return fmt.Errorf("error command:Redundant commands")
 	}
 	if err := ListContainers(); err != nil {
-		return fmt.Errorf("list container error:%v", err.Error())
+		return fmt.Errorf("list containers error->%v", err.Error())
 	}
 	return nil
 }
 
 type logCommand struct{}
 
-func (log *logCommand) usage() {
+func (*logCommand) usage() {
 	fmt.Fprintf(os.Stderr, `Usage:  coffer log CONTAINER
-Print log of a container
+Print log of a container.
+
 `)
 }
-func (log1 *logCommand) execute(nonFlagNum int, argument []string) error {
+func (*logCommand) execute(nonFlagNum int, argument []string) error {
 	if nonFlagNum != 1 { //log后没有容器名称或参数过多
-		fmt.Printf("\"coffer run\" requires only 1 argument.\nSee 'coffer log -help'.\n")
+		fmt.Printf("\"coffer log\" requires only 1 argument.\nSee 'coffer log -help'.\n")
 		return fmt.Errorf("error command:No executable commands or redundant commands")
 	}
 	if err := LogContainer(argument[0]); err != nil {
-		return fmt.Errorf("log container error:%v", err)
+		return fmt.Errorf("log container error->%v", err)
 	}
 	return nil
 }
 
 type execCommand struct{}
 
-func (exec *execCommand) usage() {
+func (*execCommand) usage() {
 	fmt.Fprintf(os.Stderr, `Usage:  coffer exec CONTAINER COMMAND
-Run a command in a running container
+Run a command in a container running in the background.
+
 `)
 }
-func (exec *execCommand) execute(nonFlagNum int, argument []string) error {
+func (*execCommand) execute(nonFlagNum int, argument []string) error {
 	//若已经指定了环境变量,说明C代码已经运行,直接返回以免重复调用
 	if os.Getenv(ENV_EXEC_PID) != "" {
 		log.SetPrefix("[INFO]")
@@ -147,25 +152,26 @@ func (exec *execCommand) execute(nonFlagNum int, argument []string) error {
 	container := argument[0] //容器名是第一个
 	cmdArray := argument[1:] //容器名后为命令
 	if err := execContainer(container, cmdArray); err != nil {
-		return fmt.Errorf("exec container error:%v", err)
+		return fmt.Errorf("exec container error->%v", err)
 	}
 	return nil
 }
 
 type stopCommand struct{}
 
-func (stop *stopCommand) usage() {
+func (*stopCommand) usage() {
 	fmt.Fprintf(os.Stderr, `Usage:  coffer stop CONTAINER
-Stop the running container
+Stop the running container.
+
 `)
 }
-func (stop *stopCommand) execute(nonFlagNum int, argument []string) error {
+func (*stopCommand) execute(nonFlagNum int, argument []string) error {
 	if nonFlagNum != 1 { //stop后没有容器名称或参数过多
-		fmt.Printf("\"coffer run\" requires only 1 argument.\nSee 'coffer stop -help'.\n")
+		fmt.Printf("\"coffer stop\" requires only 1 argument.\nSee 'coffer stop -help'.\n")
 		return fmt.Errorf("error command:No executable commands or redundant commands")
 	}
 	if err := stopContainer(argument[0]); err != nil {
-		return fmt.Errorf("stop container error:%v", err)
+		return fmt.Errorf("stop container error->%v", err)
 	} else {
 		log.SetPrefix("[INFO]")
 		log.Println("Container stopped succeeded")
@@ -175,18 +181,19 @@ func (stop *stopCommand) execute(nonFlagNum int, argument []string) error {
 
 type rmCommand struct{}
 
-func (rm *rmCommand) usage() {
+func (*rmCommand) usage() {
 	fmt.Fprintf(os.Stderr, `Usage:  coffer rm CONTAINER
-Remove the stopped container
+Remove the stopped container.
+
 `)
 }
-func (rm *rmCommand) execute(nonFlagNum int, argument []string) error {
+func (*rmCommand) execute(nonFlagNum int, argument []string) error {
 	if nonFlagNum != 1 { //rm后没有容器名称或参数过多
-		fmt.Printf("\"coffer run\" requires at least 1 argument.\nSee 'coffer rm -help'.\n")
+		fmt.Printf("\"coffer rm\" requires at least 1 argument.\nSee 'coffer rm -help'.\n")
 		return fmt.Errorf("error command:No executable commands")
 	}
 	if err := rmContainer(argument[0]); err != nil {
-		return fmt.Errorf("remove container error:%v", err)
+		return fmt.Errorf("remove container error->%v", err)
 	} else {
 		log.SetPrefix("[INFO]")
 		log.Println("Remove container succeeded")
@@ -196,9 +203,10 @@ func (rm *rmCommand) execute(nonFlagNum int, argument []string) error {
 
 type networkCommand struct{}
 
-func (network *networkCommand) usage() {
+func (*networkCommand) usage() {
 	fmt.Fprintf(os.Stderr, `Usage:  coffer network COMMAND
-Manage network
+Manage network.
+
 Commands:
 	create			Create a container network
 	list			List container network
@@ -206,7 +214,7 @@ Commands:
 Run 'coffer network COMMAND -help' for more information on a command.
 `)
 }
-func (network *networkCommand) execute(_ int, _ []string) error {
+func (*networkCommand) execute(_ int, _ []string) error {
 	if len(os.Args) <= 1 { //未输入参数
 		return fmt.Errorf("missing Command, enter -h or -help to show network usage")
 	}
@@ -217,11 +225,11 @@ func (network *networkCommand) execute(_ int, _ []string) error {
 	case "create":
 		if flag.NArg() >= 1 { //有网络名
 			if err := net.Init(); err != nil { //初始化网络
-				return fmt.Errorf("initialize network error,%v", err)
+				return fmt.Errorf("initialize network error->%v", err)
 			}
 			err := net.CreateNetwork(driver, subnet, flag.Args()[0]) //创建网络
 			if err != nil {
-				return fmt.Errorf("create network error: %+v", err)
+				return fmt.Errorf("create network error->%v", err)
 			}
 			return nil
 		} else { //create后没有网络名
@@ -240,20 +248,20 @@ func (network *networkCommand) execute(_ int, _ []string) error {
 				flag.Usage = networkListUsage
 			} else {
 				if err := net.Init(); err != nil { //初始化网络
-					return fmt.Errorf("initialize network error,%v", err)
+					return fmt.Errorf("initialize network error->%v", err)
 				}
 				if err := net.ListNetwork(); err != nil { //显示网络列表
-					return fmt.Errorf("list network error,%v", err)
+					return fmt.Errorf("list network error->%v", err)
 				}
 			}
 		}
 	case "remove":
 		if flag.NArg() >= 1 { //有待运行程序
 			if err := net.Init(); err != nil { //初始化网络
-				return fmt.Errorf("initialize network error,%v", err)
+				return fmt.Errorf("initialize network error->%v", err)
 			}
 			if err := net.DeleteNetwork(flag.Args()[0]); err != nil {
-				return fmt.Errorf("remove network error,%v", err)
+				return fmt.Errorf("remove network error->%v", err)
 			}
 		} else { //remove后没有可执行程序
 			if !help {
@@ -270,6 +278,8 @@ func (network *networkCommand) execute(_ int, _ []string) error {
 }
 func networkCreateUsage() {
 	fmt.Fprintf(os.Stderr, `Usage:  coffer network create [OPTIONS] NETWORK
+Create container network.
+
 Options:
 	-driver			Driver to manage the Network (default "bridge")
 	-subnet			Subnet in CIDR format that represents a network segment
@@ -277,12 +287,14 @@ Options:
 }
 func networkListUsage() {
 	fmt.Fprintf(os.Stderr, `Usage:  coffer network list
-List container network
+List container network.
+
 `)
 }
 
 func networkRemoveUsage() {
 	fmt.Fprintf(os.Stderr, `Usage:  coffer network remove NETWORK
-Remove container network
+Remove container network.
+
 `)
 }

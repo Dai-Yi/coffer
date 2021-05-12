@@ -19,7 +19,7 @@ func execContainer(containerName string, comArray []string) error {
 	//根据传递过来的容器名称获取容器进程对应的PID
 	pid, err := getContainerPidByName(containerName)
 	if err != nil {
-		return fmt.Errorf("exec container getContainerPidByName %s error %v", containerName, err)
+		return fmt.Errorf("exec container get container %s pid error->%v", containerName, err)
 	}
 	//以空格为分隔符拼接成一个字符串
 	cmdStr := strings.Join(comArray, " ")
@@ -37,11 +37,11 @@ func execContainer(containerName string, comArray []string) error {
 	//获取PID对应的环境变量,即容器进程的环境变量
 	containerEnv, err := getEnvByPid(pid)
 	if err != nil {
-		return fmt.Errorf("get env error,%v", err)
+		return fmt.Errorf("get env error->%v", err)
 	}
 	cmd.Env = append(os.Environ(), containerEnv...)
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("exec container %s error %v", containerName, err)
+		return fmt.Errorf("exec container %s error->%v", containerName, err)
 	}
 	return nil
 }
@@ -70,7 +70,7 @@ func getEnvByPid(pid string) ([]string, error) {
 	path := fmt.Sprintf("/proc/%s/environ", pid)
 	contentBytes, err := ioutil.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("read environment file error %v", err)
+		return nil, fmt.Errorf("read environment file error->%v", err)
 	}
 	envs := strings.Split(string(contentBytes), "\u0000") //环境变量通过\u0000分隔
 	return envs, nil

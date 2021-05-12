@@ -17,11 +17,11 @@ func (s *MemorySubsystem) Apply(cgroupPath string, pid int) error {
 		//进程pid写入cgroup下task文件中
 		if err := ioutil.WriteFile(path.Join(subsysCgroupPath, "tasks"),
 			[]byte(strconv.Itoa(pid)), 0644); err != nil {
-			return fmt.Errorf("set cgroup proc fail,%v", err)
+			return fmt.Errorf("set cgroup proc error->%v", err)
 		}
 		return nil
 	} else {
-		return fmt.Errorf("get cgroup %s error:%v", cgroupPath, err)
+		return fmt.Errorf("get cgroup %s error->%v", cgroupPath, err)
 	}
 }
 
@@ -41,7 +41,7 @@ func (s *MemorySubsystem) Set(cgroupPath string, res *ResourceConfig) error {
 			//将限制写入到memory.limit_in_bytes即可实现限制内存
 			if err := ioutil.WriteFile(path.Join(subsysCgroupPath, "memory.limit_in_bytes"),
 				[]byte(res.MemoryLimit), 0644); err != nil {
-				return fmt.Errorf("set cgroup memory fail,%v", err)
+				return fmt.Errorf("set cgroup memory error->%v", err)
 			}
 		}
 		return nil

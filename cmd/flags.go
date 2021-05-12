@@ -8,21 +8,21 @@ import (
 	"strings"
 )
 
-type env []string //自定义env类型
-func (e *env) String() string { //Value.String接口实现
+type stringSlice []string //stringSlice
+func (e *stringSlice) String() string { //Value.String接口实现
 	r := []string{}
 	for _, s := range *e {
 		r = append(r, s)
 	}
 	return strings.Join(r, ",")
 }
-func (e *env) Set(s string) error { //Value.Set接口实现
+func (e *stringSlice) Set(s string) error { //Value.Set接口实现
 	*e = append(*e, s)
 	return nil
 }
 
 var (
-	instructionOperation = map[string]command{ //指令集，实现新指令需添加到之内
+	instructions = map[string]command{ //指令集，实现新指令需添加到之内
 		"run":           &runCommand{},
 		"INiTcoNtaInER": &initCommand{},
 		"commit":        &commitCommand{},
@@ -33,7 +33,8 @@ var (
 		"rm":            &rmCommand{},
 		"network":       &networkCommand{},
 	}
-	environment     flag.Value //自定义Value类型
+	environment     stringSlice //自定义Value类型
+	portmapping     stringSlice
 	help            bool
 	version         bool
 	interactive     bool
@@ -44,19 +45,20 @@ var (
 	cpuset_cpus     string
 	cpuset_mems     string
 	containerName   string
-
+	network         string
+	//network子命令参数
 	driver string
 	subnet string
 )
 
 func init() {
-	flag.Usage = defaultusage
-	environment = &env{} //实现flag.Value接口
-	flag.Var(environment, "e", "")
+	flag.Var(&environment, "e", "")
+	flag.Var(&portmapping, "port", "")
 	flag.BoolVar(&help, "h", false, "") //不用flag自带usage
 	flag.BoolVar(&help, "help", false, "")
 	flag.BoolVar(&version, "v", false, "")
 	flag.BoolVar(&version, "version", false, "")
+	//run命令参数
 	flag.BoolVar(&interactive, "i", false, "")
 	flag.BoolVar(&background, "b", false, "")
 	flag.StringVar(&dataPersistence, "p", "", "")
@@ -65,9 +67,11 @@ func init() {
 	flag.StringVar(&cpuset_cpus, "cpuset-cpus", "0", "")
 	flag.StringVar(&cpuset_mems, "cpuset-mems", "0", "")
 	flag.StringVar(&containerName, "name", "", "")
+	flag.StringVar(&network, "net", "", "")
 	//network子命令参数
 	flag.StringVar(&driver, "driver", "", "")
 	flag.StringVar(&subnet, "subnet", "", "")
+	flag.Usage = defaultusage
 }
 func defaultusage() {
 	fmt.Fprintf(os.Stderr, `Usage:	coffer [OPTIONS] COMMAND
@@ -100,27 +104,24 @@ func CMDControl() {
 		argument := os.Args[1] //保存命令
 		os.Args = os.Args[1:]  //删除阻碍解析的coffer命令
 		flag.Parse()           //第二次解析，解析命令参数
-		cmd, ok := instructionOperation[argument]
+		cmd, ok := instructions[argument]
 		if !ok { //若没有找到相应指令
 			log.SetPrefix("[ERROR]")
 			log.Println("Invalid command")
 			return
 		}
-		if help {
-			flag.Usage = cmd.usage
-		} else {
+		if !help {
 			if err := cmd.execute(flag.NArg(), flag.Args()); err != nil { //执行指令
 				log.SetPrefix("[ERROR]")
 				log.Println(err.Error())
-				return
 			}
-		}
-	} else { //没有命令，只有flag参数
-		if version {
-			fmt.Println("Version：coffer/1.0.0")
 			return
 		}
-	} //无论有没有命令,出现help则显示帮助
+		flag.Usage = cmd.usage
+	} else if version { //没有命令,但是是-v
+		fmt.Println("Version：coffer/1.0.0")
+		return
+	}
 	if !help {
 		log.SetPrefix("[ERROR]")
 		log.Println("Invalid command")

@@ -17,11 +17,11 @@ func (s *CpusetSubsystem) Apply(cgroupPath string, pid int) error { //将进程�
 		//坑：在添加tasks之前cpuset.cpus和cpuset.mems需要配置
 		if err := ioutil.WriteFile(path.Join(subsysCgroupPath, "tasks"),
 			[]byte(strconv.Itoa(pid)), 0644); err != nil {
-			return fmt.Errorf("set cgroup proc fail,%v", err)
+			return fmt.Errorf("set cgroup proc error->%v", err)
 		}
 		return nil
 	} else {
-		return fmt.Errorf("get cgroup %s error: %v", cgroupPath, err)
+		return fmt.Errorf("get cgroup %s error->%v", cgroupPath, err)
 	}
 }
 
@@ -40,13 +40,13 @@ func (s *CpusetSubsystem) Set(cgroupPath string, res *ResourceConfig) error {
 		if res.Cpuset.Cpus != "" {
 			if err := ioutil.WriteFile(path.Join(subsysCgroupPath, "cpuset.cpus"),
 				[]byte(res.Cpuset.Cpus), 0644); err != nil {
-				return fmt.Errorf("set cgroup cpuset fail,%v", err)
+				return fmt.Errorf("set cgroup cpuset error->%v", err)
 			}
 		}
 		if res.Cpuset.Mems != "" {
 			if err := ioutil.WriteFile(path.Join(subsysCgroupPath, "cpuset.mems"),
 				[]byte(res.Cpuset.Mems), 0644); err != nil {
-				return fmt.Errorf("set cgroup cpuset fail,%v", err)
+				return fmt.Errorf("set cgroup cpuset error->%v", err)
 			}
 		}
 		return nil

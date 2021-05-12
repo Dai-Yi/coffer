@@ -17,11 +17,11 @@ func ListContainers() error {
 	dirURL = dirURL[:len(dirURL)-1]
 	//读取该目录下所有文件
 	if !container.PathExists(dirURL) {
-		return fmt.Errorf("never created a container")
+		return fmt.Errorf("no container created")
 	}
 	files, err := ioutil.ReadDir(dirURL)
 	if err != nil {
-		return fmt.Errorf("read dir error,%v", err)
+		return fmt.Errorf("read dir error->%v", err)
 	}
 	//遍历文件
 	for _, file := range files {
@@ -32,7 +32,7 @@ func ListContainers() error {
 		tmpContainer, err := getContainerInfo(file)
 		if err != nil { //有读取不出来的就跳过
 			log.SetPrefix("[ERROR]")
-			log.Println("Get container info error,", err)
+			log.Println("Get container info error->", err)
 			continue
 		}
 		containers = append(containers, tmpContainer)
@@ -52,7 +52,7 @@ func ListContainers() error {
 	}
 	//刷新标准输出流缓冲区,打印容器列表
 	if err := writer.Flush(); err != nil {
-		return fmt.Errorf("flush error,%v", err)
+		return fmt.Errorf("flush error->%v", err)
 	}
 	return nil
 }
@@ -66,12 +66,12 @@ func getContainerInfo(file os.FileInfo) (*container.ContainerInfo, error) {
 	//读取json文件内的容器信息
 	content, err := ioutil.ReadFile(configFileDir)
 	if err != nil {
-		return nil, fmt.Errorf("read file error,%v", err)
+		return nil, fmt.Errorf("read file error->%v", err)
 	}
 	var containerInfo container.ContainerInfo
 	//容器信息反序列化为容器信息对象
 	if err := json.Unmarshal(content, &containerInfo); err != nil {
-		return nil, fmt.Errorf("json unmarshal error,%v", err)
+		return nil, fmt.Errorf("json unmarshal error->%v", err)
 	}
 	return &containerInfo, nil
 }

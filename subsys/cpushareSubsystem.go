@@ -17,11 +17,11 @@ func (s *CpushareSubsystem) Apply(cgroupPath string, pid int) error {
 		//进程pid写入cgroup下task文件中
 		if err := ioutil.WriteFile(path.Join(subsysCgroupPath, "tasks"),
 			[]byte(strconv.Itoa(pid)), 0644); err != nil {
-			return fmt.Errorf("set cgroup proc fail,%v", err)
+			return fmt.Errorf("set cgroup proc error->%v", err)
 		}
 		return nil
 	} else {
-		return fmt.Errorf("get cgroup %s error: %v", cgroupPath, err)
+		return fmt.Errorf("get cgroup error->%v", err)
 	}
 }
 
@@ -40,7 +40,7 @@ func (s *CpushareSubsystem) Set(cgroupPath string, res *ResourceConfig) error {
 		if res.CpuShare != "" {
 			if err := ioutil.WriteFile(path.Join(subsysCgroupPath, "cpu.shares"),
 				[]byte(res.CpuShare), 0644); err != nil {
-				return fmt.Errorf("set cgroup cpu share fail,%v", err)
+				return fmt.Errorf("set cgroup cpu share error->%v", err)
 			}
 		}
 		return nil

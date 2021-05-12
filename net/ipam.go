@@ -10,7 +10,7 @@ import (
 	"strings"
 )
 
-const ipamDefaultAllocatorPath = "/var/run/mydocker/network/ipam/subnet.json"
+const ipamDefaultAllocatorPath = "/var/run/coffer/network/ipam/subnet.json"
 
 type IPAM struct { //存放IP地址分配信息
 	SubnetAllocatorPath string //分配文件存放位置
@@ -42,7 +42,7 @@ func (ipam *IPAM) load() error {
 	//将文件中的内容反序列化出IP的分配信息
 	err = json.Unmarshal(subnetJson[:n], ipam.Subnets)
 	if err != nil {
-		return fmt.Errorf("error dump allocation info, %v", err)
+		return fmt.Errorf("json unmarshal error->%v", err)
 	}
 	return nil
 }
@@ -83,7 +83,7 @@ func (ipam *IPAM) Allocate(subnet *net.IPNet) (ip net.IP, err error) {
 	// 从文件中加载已经分配的网段信息
 	err = ipam.load()
 	if err != nil {
-		return nil, fmt.Errorf("error dump allocation info, %v", err)
+		return nil, fmt.Errorf("load ipam error->%v", err)
 	}
 	_, subnet, _ = net.ParseCIDR(subnet.String())
 	//size函数返回网段的子网掩码的总长度和网段前面的固定位长度
@@ -122,7 +122,7 @@ func (ipam *IPAM) Release(subnet *net.IPNet, ipaddr *net.IP) error {
 	_, subnet, _ = net.ParseCIDR(subnet.String())
 	err := ipam.load()
 	if err != nil {
-		return fmt.Errorf("error dump allocation info, %v", err)
+		return fmt.Errorf("load ipam error->%v", err)
 	}
 	//计算IP地址在网段位图数组中的索引位置
 	c := 0

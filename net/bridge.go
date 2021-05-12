@@ -30,7 +30,7 @@ func (d *BridgeNetworkDriver) Create(subnet string, name string) (*Network, erro
 	//配置网桥
 	err := d.initBridge(n)
 	if err != nil {
-		return nil, fmt.Errorf("error init bridge: %v", err)
+		return nil, fmt.Errorf("init bridge error->%v", err)
 	}
 	//返回配置好的网络
 	return n, err
@@ -67,11 +67,11 @@ func (d *BridgeNetworkDriver) Connect(network *Network, endpoint *Endpoint) erro
 	}
 	//创建Veth接口
 	if err = netlink.LinkAdd(&endpoint.Device); err != nil {
-		return fmt.Errorf("error Add Endpoint Device: %v", err)
+		return fmt.Errorf("add dndpoint device error->%v", err)
 	}
 	//设置Veth启动
 	if err = netlink.LinkSetUp(&endpoint.Device); err != nil {
-		return fmt.Errorf("error Add Endpoint Device: %v", err)
+		return fmt.Errorf("add endpoint device error->%v", err)
 	}
 	return nil
 }
@@ -85,21 +85,21 @@ func (d *BridgeNetworkDriver) initBridge(n *Network) error {
 	//创建Bridge虚拟设备
 	bridgeName := n.Name
 	if err := createBridgeInterface(bridgeName); err != nil {
-		return fmt.Errorf("error add bridge： %s, Error: %v", bridgeName, err)
+		return fmt.Errorf("add bridge %s error->%v", bridgeName, err)
 	}
 	//设置Bridge设备的地址和路由
 	gatewayIP := *n.IpRange
 	gatewayIP.IP = n.IpRange.IP
 	if err := setInterfaceIP(bridgeName, gatewayIP.String()); err != nil {
-		return fmt.Errorf("error assigning address: %s on bridge: %s with an error of: %v", gatewayIP, bridgeName, err)
+		return fmt.Errorf("assigning address %s on bridge %s error->%v", gatewayIP, bridgeName, err)
 	}
 	//启动Bridge设备
 	if err := setInterfaceUP(bridgeName); err != nil {
-		return fmt.Errorf("error set bridge up: %s, Error: %v", bridgeName, err)
+		return fmt.Errorf("set bridge %s up error->%v", bridgeName, err)
 	}
 	//设置iptables的SNAT规则
 	if err := setupIPTables(bridgeName, n.IpRange); err != nil {
-		return fmt.Errorf("error setting iptables for %s: %v", bridgeName, err)
+		return fmt.Errorf("set iptables for %s error->%v", bridgeName, err)
 	}
 	return nil
 }
@@ -111,11 +111,11 @@ func (d *BridgeNetworkDriver) DeleteBridge(n *Network) error {
 	//找到网络对应的设备
 	l, err := netlink.LinkByName(bridgeName)
 	if err != nil {
-		return fmt.Errorf("getting link with name %s failed: %v", bridgeName, err)
+		return fmt.Errorf("get link with name %s error->%v", bridgeName, err)
 	}
 	//删除网络对应的Bridge设备
 	if err := netlink.LinkDel(l); err != nil {
-		return fmt.Errorf("failed to remove bridge interface %s delete: %v", bridgeName, err)
+		return fmt.Errorf("remove bridge %s error->%v", bridgeName, err)
 	}
 	return nil
 }
@@ -135,7 +135,7 @@ func createBridgeInterface(bridgeName string) error {
 	br := &netlink.Bridge{LinkAttrs: la}
 	//创建Bridge虚拟网络设备
 	if err := netlink.LinkAdd(br); err != nil {
-		return fmt.Errorf("bridge creation failed for bridge %s: %v", bridgeName, err)
+		return fmt.Errorf("create bridge %s error->%v", bridgeName, err)
 	}
 	return nil
 }
@@ -144,11 +144,11 @@ func createBridgeInterface(bridgeName string) error {
 func setInterfaceUP(interfaceName string) error {
 	iface, err := netlink.LinkByName(interfaceName)
 	if err != nil {
-		return fmt.Errorf("error retrieving a link named [ %s ]: %v", iface.Attrs().Name, err)
+		return fmt.Errorf("retrieving %s error->%v", iface.Attrs().Name, err)
 	}
 	//设置接口状态为UP状态
 	if err := netlink.LinkSetUp(iface); err != nil {
-		return fmt.Errorf("error enabling interface for %s: %v", interfaceName, err)
+		return fmt.Errorf("enabling %s interface error->%v", interfaceName, err)
 	}
 	return nil
 }
@@ -164,11 +164,10 @@ func setInterfaceIP(name string, rawIP string) error {
 		if err == nil {
 			break
 		}
-		// log.Debugf("error retrieving new bridge netlink link [ %s ]... retrying", name)
 		time.Sleep(2 * time.Second)
 	}
 	if err != nil {
-		return fmt.Errorf("abandoning retrieving the new bridge link from netlink, Run [ ip link ] to troubleshoot the error: %v", err)
+		return fmt.Errorf("abandoning retrieving the new bridge link from netlink, Run \"ip link\" to troubleshoot the error->%v", err)
 	}
 	//返回值包含网段信息和ip
 	ipNet, err := netlink.ParseIPNet(rawIP)
@@ -188,7 +187,7 @@ func setupIPTables(bridgeName string, subnet *net.IPNet) error {
 	//执行iptables命令配置SNAT规则
 	output, err := cmd.Output()
 	if err != nil {
-		return fmt.Errorf("iptables Output, %v", output)
+		return fmt.Errorf("iptables Output:%v", output)
 	}
 	return nil
 }
