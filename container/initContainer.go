@@ -23,13 +23,12 @@ func NewProcess(tty bool, volume string, environment []string, containerName str
 			syscall.CLONE_NEWNS |
 			syscall.CLONE_NEWNET |
 			syscall.CLONE_NEWIPC,
-		// Setpgid: true,//开启之后可以kill组进程，但有bug，bash无法使用
 	}
 	if tty { //如果要交互，显示容器运行信息
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-	} else { //不交互则默认输出到log文件
+	} else { //后台运行则输出到log文件
 		dirURL := fmt.Sprintf(DefaultInfoLocation, containerName)
 		if !PathExists(dirURL) {
 			if err := os.MkdirAll(dirURL, 0622); err != nil {
@@ -42,6 +41,7 @@ func NewProcess(tty bool, volume string, environment []string, containerName str
 			return nil, nil, fmt.Errorf("container process create log file error->%v", err)
 		}
 		cmd.Stdout = stdLogFile
+		cmd.Stderr = stdLogFile
 	}
 	cmd.ExtraFiles = []*os.File{readPipe}          //附加管道文件读取端，使容器能够读取管道传入的命令
 	cmd.Env = append(os.Environ(), environment...) //将环境变量添加上用户自定义环境变量
@@ -52,23 +52,23 @@ func NewProcess(tty bool, volume string, environment []string, containerName str
 	return cmd, writePipe, nil
 }
 
-func receiveCommand() ([]string, error) {
+func PipeReceive() (string, error) {
 	pipe := os.NewFile(uintptr(3), "pipe") //从文件描述符获取管道
 	msg, err := ioutil.ReadAll(pipe)
 	if err != nil {
-		return nil, fmt.Errorf("init read pipe error->%v", err)
+		return "", fmt.Errorf("init read pipe error->%v", err)
 	}
-	msgStr := string(msg)
-	return strings.Split(msgStr, " "), nil
+	return string(msg), nil
 }
 func InitializeContainer() error { //容器内部初始化
-	cmdList, err := receiveCommand() //从管道读取到命令
+	tempList, err := PipeReceive() //从管道读取到命令
 	if err != nil {
 		return fmt.Errorf("receive command error->%v", err)
 	}
-	if len(cmdList) == 0 {
+	if len(tempList) == 0 {
 		return fmt.Errorf("run container get user command error->command list is empty")
 	}
+	cmdList := strings.Split(tempList, " ")
 	if err := setMount(); err != nil {
 		return fmt.Errorf("set mount error->%v", err)
 	}
@@ -76,7 +76,7 @@ func InitializeContainer() error { //容器内部初始化
 	if err != nil {
 		return fmt.Errorf("exec look path error->%v", err)
 	}
-	if err := syscall.Exec(path, cmdList[0:], os.Environ()); err != nil { //Exec覆盖容器进程
+	if err := syscall.Exec(path, cmdList[0:], os.Environ()); err != nil { //Exec使程序进程覆盖容器进程
 		return fmt.Errorf("exec command error->%v,", err)
 	}
 	return nil
@@ -125,4 +125,10 @@ func changeRoot(root string) error { //更改根目录
 	}
 	// 删除临时文件夹
 	return os.Remove(oldRoot)
+}
+func BackgroundProcess() (*exec.Cmd, error) { //转换为后台运行
+	cmd := exec.Command("/proc/self/exe", os.Args...)                     //调用自身来创建子进程,参数不变
+	cmd.ExtraFiles = []*os.File{os.Stdout, os.Stderr}                     //将输入输出传递到子进程
+	cmd.Env = append(os.Environ(), fmt.Sprintf("%s=background", ENV_RUN)) //添加用于判断的环境变量
+	return cmd, nil
 }

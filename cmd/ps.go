@@ -10,32 +10,10 @@ import (
 	"text/tabwriter"
 )
 
-func ListContainers() error {
-	var containers []*container.ContainerInfo
-	//获取容器信息文件路径
-	dirURL := fmt.Sprintf(container.DefaultInfoLocation, "")
-	dirURL = dirURL[:len(dirURL)-1]
-	//读取该目录下所有文件
-	if !container.PathExists(dirURL) {
-		return fmt.Errorf("no container created")
-	}
-	files, err := ioutil.ReadDir(dirURL)
+func printContainers() error {
+	containers, err := listContainers()
 	if err != nil {
-		return fmt.Errorf("read dir error->%v", err)
-	}
-	//遍历文件
-	for _, file := range files {
-		if file.Name() == "network" { //忽略network文件
-			continue
-		}
-		//根据容器配置文件获取对应信息,转换为容器信息对象
-		tmpContainer, err := getContainerInfo(file)
-		if err != nil { //有读取不出来的就跳过
-			log.SetPrefix("[ERROR]")
-			log.Println("Get container info error->", err)
-			continue
-		}
-		containers = append(containers, tmpContainer)
+		return fmt.Errorf("list containers error")
 	}
 	//打印控制台信息
 	writer := tabwriter.NewWriter(os.Stdout, 12, 1, 3, ' ', 0)
@@ -55,6 +33,35 @@ func ListContainers() error {
 		return fmt.Errorf("flush error->%v", err)
 	}
 	return nil
+}
+func listContainers() ([]*container.ContainerInfo, error) {
+	var containers []*container.ContainerInfo
+	//获取容器信息文件路径
+	dirURL := fmt.Sprintf(container.DefaultInfoLocation, "")
+	dirURL = dirURL[:len(dirURL)-1]
+	//读取该目录下所有文件
+	if !container.PathExists(dirURL) {
+		return nil, fmt.Errorf("no container created")
+	}
+	files, err := ioutil.ReadDir(dirURL)
+	if err != nil {
+		return nil, fmt.Errorf("read dir error->%v", err)
+	}
+	//遍历文件
+	for _, file := range files {
+		if file.Name() == "network" { //忽略network文件
+			continue
+		}
+		//根据容器配置文件获取对应信息,转换为容器信息对象
+		tmpContainer, err := getContainerInfo(file)
+		if err != nil { //有读取不出来的就跳过
+			log.SetPrefix("[ERROR]")
+			log.Println("Get container info error->", err)
+			continue
+		}
+		containers = append(containers, tmpContainer)
+	}
+	return containers, nil
 }
 
 func getContainerInfo(file os.FileInfo) (*container.ContainerInfo, error) {

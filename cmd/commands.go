@@ -51,6 +51,16 @@ func (*runCommand) execute(nonFlagNum int, argument []string) error {
 			Mems: cpuset_mems,
 		},
 	}
+	env := os.Getenv(container.ENV_RUN)      //获取环境变量判断当前是否为后台进程
+	if !interactive && env != "background" { //如果需要后台运行但当前并非后台进程则转换为后台进程
+		if err := transform(); err != nil {
+			return fmt.Errorf("transform self into background error")
+		}
+		log.SetPrefix("[INFO]")
+		log.Println("Container background running")
+		return nil
+	}
+	//如果已经转换为后台进程或需要交互则正常运行
 	if err := run(interactive, dataPersistence, containerName, imageName, network,
 		cmdArray, environment.String(), portmapping.String(), resConfig); err != nil {
 		return fmt.Errorf("run image error->%v", err)
@@ -105,8 +115,8 @@ func (*psCommand) execute(nonFlagNum int, argument []string) error {
 		fmt.Println("there are redundant parameters.\nSee 'coffer ps -help'.")
 		return fmt.Errorf("error command:Redundant commands")
 	}
-	if err := ListContainers(); err != nil {
-		return fmt.Errorf("list containers error->%v", err.Error())
+	if err := printContainers(); err != nil {
+		return fmt.Errorf("print containers error->%v", err.Error())
 	}
 	return nil
 }
