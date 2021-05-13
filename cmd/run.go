@@ -3,15 +3,17 @@ package cmd
 import (
 	"coffer/cgroups"
 	"coffer/container"
+	"coffer/log"
 	"coffer/net"
 	"coffer/subsys"
 	"fmt"
-	"log"
 	"math/rand"
 	"os"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
+	"unsafe"
 )
 
 func pipeSend(msgList interface{}, writePipe *os.File) {
@@ -43,6 +45,14 @@ func duplicateQuery(id string, Name string) (string, error) {
 		}
 	}
 	return newID, nil
+}
+func setProcessName(name string) error {
+	bytes := append([]byte(name), 0)
+	ptr := unsafe.Pointer(&bytes[0])
+	if _, _, errno := syscall.RawSyscall6(syscall.SYS_PRCTL, syscall.PR_SET_NAME, uintptr(ptr), 0, 0, 0, 0); errno != 0 {
+		return syscall.Errno(errno)
+	}
+	return nil
 }
 func run(tty bool, volume string, containerName string, imageName string, network string,
 	cmdList []string, environment string, portmapping string, res *subsys.ResourceConfig) error { //run命令
@@ -98,12 +108,10 @@ func run(tty bool, volume string, containerName string, imageName string, networ
 		defer cgroupManager.Destroy() //运行完后销毁cgroup manager
 		container.DeleteInfo(containerName)
 		container.DeleteWorkSpace(volume, containerName)
-		log.SetPrefix("[INFO]")
-		log.Println("Container closed")
+		log.Logout("INFO", "Container closed")
 		return nil
 	}
-	log.SetPrefix("[INFO]")
-	log.Println("Container background running")
+	log.Logout("INFO", "Container background running")
 	return nil
 }
 

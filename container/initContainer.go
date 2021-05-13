@@ -1,9 +1,9 @@
 package container
 
 import (
+	"coffer/log"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -88,8 +88,7 @@ func setMount() error {
 	if err != nil {
 		return fmt.Errorf("get current location error->%v", err)
 	}
-	log.SetPrefix("[INFO]")
-	log.Println("Current location:", pwd)
+	log.Logout("INFO", "Current location:", pwd)
 	if err = changeRoot(pwd); err != nil {
 		return fmt.Errorf("change root mount error->%v", err)
 	}
@@ -127,8 +126,10 @@ func changeRoot(root string) error { //更改根目录
 	return os.Remove(oldRoot)
 }
 func BackgroundProcess() (*exec.Cmd, error) { //转换为后台运行
-	cmd := exec.Command("/proc/self/exe", os.Args...)                     //调用自身来创建子进程,参数不变
-	cmd.ExtraFiles = []*os.File{os.Stdout, os.Stderr}                     //将输入输出传递到子进程
+	temp := []string{"coffer"}
+	os.Args = append(temp, os.Args...)
+	cmd := exec.Command("/proc/self/exe", os.Args...) //调用自身来创建子进程,参数不变
+	cmd.Args = os.Args
 	cmd.Env = append(os.Environ(), fmt.Sprintf("%s=background", ENV_RUN)) //添加用于判断的环境变量
 	return cmd, nil
 }

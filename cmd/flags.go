@@ -1,9 +1,9 @@
 package cmd
 
 import (
+	"coffer/log"
 	"flag"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 )
@@ -95,8 +95,7 @@ Run 'coffer COMMAND -help' for more information on a command
 
 func CMDControl() {
 	if len(os.Args) <= 1 { //未输入参数
-		log.SetPrefix("[ERROR]")
-		log.Println("Missing Command, enter -h or -help to show usage")
+		log.Logout("ERROR", "Missing Command, enter -h or -help to show usage")
 		return
 	}
 	flag.Parse()          //第一次解析，解析help、version参数
@@ -106,14 +105,12 @@ func CMDControl() {
 		flag.Parse()           //第二次解析，解析命令参数
 		cmd, ok := instructions[argument]
 		if !ok { //若没有找到相应指令
-			log.SetPrefix("[ERROR]")
-			log.Println("Invalid command")
+			log.Logout("ERROR", "Invalid command")
 			return
 		}
 		if !help {
 			if err := cmd.execute(flag.NArg(), flag.Args()); err != nil { //执行指令
-				log.SetPrefix("[ERROR]")
-				log.Println(err.Error())
+				log.Logout("ERROR", err.Error())
 			}
 			return
 		}
@@ -123,8 +120,7 @@ func CMDControl() {
 		return
 	}
 	if !help {
-		log.SetPrefix("[ERROR]")
-		log.Println("Invalid command")
+		log.Logout("ERROR", "Invalid command")
 		return
 	}
 	flag.Usage()

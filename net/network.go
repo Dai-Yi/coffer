@@ -2,9 +2,9 @@ package net
 
 import (
 	"coffer/container"
+	"coffer/log"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -170,8 +170,7 @@ func Init() error {
 		networks[nwName] = nw
 		return nil
 	})
-	log.SetPrefix("[INFO]")
-	log.Println("networks:", networks)
+	log.Logout("INFO", "networks:", networks)
 	return nil
 }
 
@@ -274,8 +273,7 @@ func configPortMapping(endpoint *Endpoint, cinfo *container.ContainerInfo) error
 		//分隔成宿主机的端口和容器的端口
 		portMapping := strings.Split(pm, ":")
 		if len(portMapping) != 2 {
-			log.SetPrefix("[ERROR]")
-			log.Println("port mapping format error", pm)
+			log.Logout("ERROR", "port mapping format error", pm)
 			continue
 		}
 		//调用命令配置iptables
@@ -285,8 +283,7 @@ func configPortMapping(endpoint *Endpoint, cinfo *container.ContainerInfo) error
 		//执行iptables命令,添加端口映射转发规则
 		output, err := cmd.Output()
 		if err != nil {
-			log.SetPrefix("[ERROR]")
-			log.Println("Iptables Output:", output)
+			log.Logout("ERROR", "Iptables Output:", output)
 			continue
 		}
 	}
@@ -298,8 +295,7 @@ func enterContainerNetns(enLink *netlink.Link, cinfo *container.ContainerInfo) f
 	//找到容器的net Namespace
 	f, err := os.OpenFile(fmt.Sprintf("/proc/%s/ns/net", cinfo.Pid), os.O_RDONLY, 0)
 	if err != nil {
-		log.SetPrefix("[ERROR]")
-		log.Println("get container net namespace error->", err.Error())
+		log.Logout("ERROR", "get container net namespace error->", err.Error())
 	}
 	//取到文件描述符
 	nsFD := f.Fd()
@@ -307,19 +303,16 @@ func enterContainerNetns(enLink *netlink.Link, cinfo *container.ContainerInfo) f
 	runtime.LockOSThread()
 	// 修改veth peer 另外一端移到容器的namespace中
 	if err = netlink.LinkSetNsFd(*enLink, int(nsFD)); err != nil {
-		log.SetPrefix("[ERROR]")
-		log.Println("set link netns error->", err.Error())
+		log.Logout("ERROR", "set link netns error->", err.Error())
 	}
 	// 获取当前的网络namespace
 	origns, err := netns.Get()
 	if err != nil {
-		log.SetPrefix("[ERROR]")
-		log.Println("get current netns error->", err.Error())
+		log.Logout("ERROR", "get current netns error->", err.Error())
 	}
 	// 设置当前进程到新的网络namespace，并在函数执行完成之后再恢复到之前的namespace
 	if err = netns.Set(netns.NsHandle(nsFD)); err != nil {
-		log.SetPrefix("[ERROR]")
-		log.Println("set netns error->", err.Error())
+		log.Logout("ERROR", "set netns error->", err.Error())
 	}
 	//返回之前net Namespace的函数
 	return func() {

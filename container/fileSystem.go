@@ -1,8 +1,8 @@
 package container
 
 import (
+	"coffer/log"
 	"fmt"
-	"log"
 	"os"
 	"os/exec"
 	"strings"
@@ -24,8 +24,7 @@ func NewWorkSpace(containerName string, imageName string, volume string) error {
 			if err := mountVolume(volumeURLs, containerName); err != nil {
 				return fmt.Errorf("mount volume error->%v", err)
 			}
-			log.SetPrefix("[INFO]")
-			log.Println("New work space volume URLs: ", volumeURLs)
+			log.Logout("INFO", "New work space volume URLs: ", volumeURLs)
 		} else {
 			return fmt.Errorf("volume parameter input error")
 		}
@@ -48,8 +47,7 @@ func createReadOnlyLayer(image string) error {
 	imageURL := RootURL + image + ".tar"
 	program := RootURL + image + "/"
 	if !PathExists(program) { //没有可执行程序的目录
-		log.SetPrefix("[WARN]")
-		log.Println(image, "not found,try to untar", image+".tar")
+		log.Logout("WARN", image, "not found,try to untar", image+".tar")
 		if !PathExists(imageURL) { //没有可解压的.tar文件
 			return fmt.Errorf("%v does not exist", imageURL)
 		}
