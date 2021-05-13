@@ -7,7 +7,7 @@ import (
 	"os"
 )
 
-func LogContainer(containerName string) error {
+func logContainer(containerName string) error {
 	dirURL := fmt.Sprintf(container.DefaultInfoLocation, containerName)
 	logFileLocation := dirURL + container.ContainerLogFile
 	file, err := os.Open(logFileLocation)

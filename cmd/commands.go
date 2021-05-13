@@ -56,8 +56,6 @@ func (*runCommand) execute(nonFlagNum int, argument []string) error {
 		if err := transform(); err != nil {
 			return fmt.Errorf("transform self into background error")
 		}
-		log.SetPrefix("[INFO]")
-		log.Println("Container background running")
 		return nil
 	}
 	//如果已经转换为后台进程或需要交互则正常运行
@@ -134,7 +132,7 @@ func (*logCommand) execute(nonFlagNum int, argument []string) error {
 		fmt.Printf("\"coffer log\" requires only 1 argument.\nSee 'coffer log -help'.\n")
 		return fmt.Errorf("error command:No executable commands or redundant commands")
 	}
-	if err := LogContainer(argument[0]); err != nil {
+	if err := logContainer(argument[0]); err != nil {
 		return fmt.Errorf("log container error->%v", err)
 	}
 	return nil

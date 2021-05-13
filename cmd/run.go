@@ -102,7 +102,8 @@ func run(tty bool, volume string, containerName string, imageName string, networ
 		log.Println("Container closed")
 		return nil
 	}
-
+	log.SetPrefix("[INFO]")
+	log.Println("Container background running")
 	return nil
 }
 
