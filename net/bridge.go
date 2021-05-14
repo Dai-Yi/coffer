@@ -10,7 +10,7 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-type BridgeNetworkDriver struct {
+type BridgeNetworkDriver struct { //Bridge网络驱动
 }
 
 func (d *BridgeNetworkDriver) Name() string {

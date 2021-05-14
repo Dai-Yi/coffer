@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"coffer/container"
-	"coffer/log"
+	"coffer/utils"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -23,8 +23,8 @@ func execContainer(containerName string, comArray []string) error {
 	}
 	//以空格为分隔符拼接成一个字符串
 	cmdStr := strings.Join(comArray, " ")
-	log.Logout("INFO", "container pid", pid)
-	log.Logout("INFO", "command", cmdStr)
+	utils.Logout("INFO", "container pid", pid)
+	utils.Logout("INFO", "command", cmdStr)
 	//调用自己,创建出一个子进程
 	cmd := exec.Command("/proc/self/exe", "exec")
 	cmd.Stdin = os.Stdin

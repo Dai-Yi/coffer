@@ -1,7 +1,7 @@
 package container
 
 import (
-	"coffer/log"
+	"coffer/utils"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -30,7 +30,7 @@ func NewProcess(tty bool, volume string, environment []string, containerName str
 		cmd.Stderr = os.Stderr
 	} else { //后台运行则输出到log文件
 		dirURL := fmt.Sprintf(DefaultInfoLocation, containerName)
-		if !PathExists(dirURL) {
+		if !utils.PathExists(dirURL) {
 			if err := os.MkdirAll(dirURL, 0622); err != nil {
 				return nil, nil, fmt.Errorf("container process mkdir error->%v", err)
 			}
@@ -88,7 +88,7 @@ func setMount() error {
 	if err != nil {
 		return fmt.Errorf("get current location error->%v", err)
 	}
-	log.Logout("INFO", "Current location:", pwd)
+	utils.Logout("INFO", "Current location:", pwd)
 	if err = changeRoot(pwd); err != nil {
 		return fmt.Errorf("change root mount error->%v", err)
 	}

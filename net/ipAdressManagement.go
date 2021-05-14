@@ -1,7 +1,7 @@
 package net
 
 import (
-	"coffer/container"
+	"coffer/utils"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -10,22 +10,15 @@ import (
 	"strings"
 )
 
-const ipamDefaultAllocatorPath = "/var/run/coffer/network/ipam/subnet.json"
-
-type IPAM struct { //存放IP地址分配信息
+type IPAM struct { //IP Adress Management,用于网络IP地址的分配和释放
 	SubnetAllocatorPath string //分配文件存放位置
 	//网段和位图算法的数组map,key是网段,value是分配的位图数组
 	Subnets *map[string]string
 }
 
-//初始化一个IPAM对象
-var ipAllocator = &IPAM{
-	SubnetAllocatorPath: ipamDefaultAllocatorPath,
-}
-
 //加载网段地址分配信息
 func (ipam *IPAM) load() error {
-	if !container.PathExists(ipam.SubnetAllocatorPath) {
+	if !utils.PathExists(ipam.SubnetAllocatorPath) {
 		return nil
 	}
 	//打开并读取存储文件
@@ -51,7 +44,7 @@ func (ipam *IPAM) load() error {
 func (ipam *IPAM) dump() error {
 	//检查存储文件所在文件夹是否存在,如果不存在则创建
 	ipamConfigFileDir, _ := path.Split(ipam.SubnetAllocatorPath)
-	if !container.PathExists(ipamConfigFileDir) {
+	if !utils.PathExists(ipamConfigFileDir) {
 		if err := os.MkdirAll(ipamConfigFileDir, 0644); err != nil {
 			return err
 		}
@@ -76,7 +69,7 @@ func (ipam *IPAM) dump() error {
 	return nil
 }
 
-//在网段中分配一个可用的IP地址
+//从指定网段分配IP地址
 func (ipam *IPAM) Allocate(subnet *net.IPNet) (ip net.IP, err error) {
 	// 存放网段中地址分配信息的数组
 	ipam.Subnets = &map[string]string{}
@@ -115,7 +108,7 @@ func (ipam *IPAM) Allocate(subnet *net.IPNet) (ip net.IP, err error) {
 	return
 }
 
-//释放IP地址
+//从指定网段中释放IP地址
 func (ipam *IPAM) Release(subnet *net.IPNet, ipaddr *net.IP) error {
 	ipam.Subnets = &map[string]string{}
 	//加载网段的分配信息

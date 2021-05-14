@@ -1,7 +1,7 @@
 package container
 
 import (
-	"coffer/log"
+	"coffer/utils"
 	"fmt"
 	"os"
 	"os/exec"
@@ -24,7 +24,7 @@ func NewWorkSpace(containerName string, imageName string, volume string) error {
 			if err := mountVolume(volumeURLs, containerName); err != nil {
 				return fmt.Errorf("mount volume error->%v", err)
 			}
-			log.Logout("INFO", "New work space volume URLs: ", volumeURLs)
+			utils.Logout("INFO", "New work space volume URLs: ", volumeURLs)
 		} else {
 			return fmt.Errorf("volume parameter input error")
 		}
@@ -32,23 +32,13 @@ func NewWorkSpace(containerName string, imageName string, volume string) error {
 	return nil
 }
 
-//判断文件路径是否存在
-func PathExists(path string) bool {
-	_, err := os.Stat(path)
-	if err == nil {
-		return true
-	} else {
-		return !os.IsNotExist(err)
-	}
-}
-
 //解压.tar镜像创建只读层
 func createReadOnlyLayer(image string) error {
 	imageURL := RootURL + image + ".tar"
 	program := RootURL + image + "/"
-	if !PathExists(program) { //没有可执行程序的目录
-		log.Logout("WARN", image, "not found,try to untar", image+".tar")
-		if !PathExists(imageURL) { //没有可解压的.tar文件
+	if !utils.PathExists(program) { //没有可执行程序的目录
+		utils.Logout("WARN", image, "not found,try to untar", image+".tar")
+		if !utils.PathExists(imageURL) { //没有可解压的.tar文件
 			return fmt.Errorf("%v does not exist", imageURL)
 		}
 		if err := os.MkdirAll(program, 0622); err != nil {
@@ -65,7 +55,7 @@ func createReadOnlyLayer(image string) error {
 //为每个容器创建可写层
 func createWriteLayer(containerName string) error {
 	writeURL := fmt.Sprintf(WriteLayerURL, containerName)
-	if !PathExists(writeURL) {
+	if !utils.PathExists(writeURL) {
 		if err := os.MkdirAll(writeURL, 0777); err != nil {
 			return fmt.Errorf("mkdir write layer dir error->%v", err)
 		}
@@ -76,7 +66,7 @@ func createWriteLayer(containerName string) error {
 //创建mnt文件夹作为挂载点
 func createMountPoint(containerName string, imageName string) error {
 	mntURL := fmt.Sprintf(MntURL, containerName)
-	if !PathExists(mntURL) {
+	if !utils.PathExists(mntURL) {
 		if err := os.MkdirAll(mntURL, 0777); err != nil {
 			return fmt.Errorf("mkdir mountpoint dir error->%v", err)
 		}
@@ -96,7 +86,7 @@ func createMountPoint(containerName string, imageName string) error {
 func mountVolume(volumeURLs []string, containerName string) error {
 	//创建宿主机文件目录
 	hostURL := volumeURLs[0]
-	if !PathExists(hostURL) {
+	if !utils.PathExists(hostURL) {
 		if err := os.Mkdir(hostURL, 0777); err != nil {
 			return fmt.Errorf("mkdir host dir error->%v", err)
 		}
@@ -104,7 +94,7 @@ func mountVolume(volumeURLs []string, containerName string) error {
 	//在容器文件系统中创建挂载点
 	mntURL := fmt.Sprintf(MntURL, containerName)
 	containerVolumeURL := mntURL + volumeURLs[1]
-	if !PathExists(containerVolumeURL) {
+	if !utils.PathExists(containerVolumeURL) {
 		if err := os.Mkdir(containerVolumeURL, 0777); err != nil {
 			return fmt.Errorf("mkdir container volume dir error->%v", err)
 		}
@@ -153,7 +143,7 @@ func deleteMountPoint(containerName string) error {
 	if err != nil {
 		return fmt.Errorf("run umount mnt command error->%v", err)
 	}
-	if PathExists(mntURL) {
+	if utils.PathExists(mntURL) {
 		if err := os.RemoveAll(mntURL); err != nil {
 			return fmt.Errorf("remove mount point dir error->%v", err)
 		}
@@ -164,7 +154,7 @@ func deleteMountPoint(containerName string) error {
 //删除可写层
 func deleteWriteLayer(containerName string) error {
 	writeURL := fmt.Sprintf(WriteLayerURL, containerName)
-	if PathExists(writeURL) {
+	if utils.PathExists(writeURL) {
 		if err := os.RemoveAll(writeURL); err != nil {
 			return fmt.Errorf("remove write layer dir error->%v", err)
 		}

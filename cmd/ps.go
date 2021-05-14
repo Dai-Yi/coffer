@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"coffer/container"
-	"coffer/log"
+	"coffer/utils"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -40,7 +40,7 @@ func listContainers() ([]*container.ContainerInfo, error) {
 	dirURL := fmt.Sprintf(container.DefaultInfoLocation, "")
 	dirURL = dirURL[:len(dirURL)-1]
 	//读取该目录下所有文件
-	if !container.PathExists(dirURL) {
+	if !utils.PathExists(dirURL) {
 		return nil, fmt.Errorf("no container created")
 	}
 	files, err := ioutil.ReadDir(dirURL)
@@ -55,7 +55,7 @@ func listContainers() ([]*container.ContainerInfo, error) {
 		//根据容器配置文件获取对应信息,转换为容器信息对象
 		tmpContainer, err := getContainerInfo(file)
 		if err != nil { //有读取不出来的就跳过
-			log.Logout("ERROR", "Get container info error->", err)
+			utils.Logout("ERROR", "Get container info error->", err)
 			continue
 		}
 		containers = append(containers, tmpContainer)

@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"coffer/container"
-	"coffer/log"
 	"coffer/net"
 	"coffer/subsys"
+	"coffer/utils"
 	"flag"
 	"fmt"
 	"os"
@@ -58,7 +58,7 @@ func (*runCommand) execute(nonFlagNum int, argument []string) error {
 		}
 		return nil
 	} //到这里时，肯定是前台运行或后台守护进程已启动
-	setProcessName("coffer")
+	utils.SetProcessName("coffer")
 	//如果已经转换为后台进程或需要交互则正常运行
 	if err := run(interactive, dataPersistence, containerName, imageName, network,
 		cmdArray, environment.String(), portmapping.String(), resConfig); err != nil {
@@ -95,7 +95,7 @@ func (*commitCommand) execute(nonFlagNum int, argument []string) error {
 	if err := commitContainer(containerName, imageName); err != nil {
 		return fmt.Errorf("commit container error->%v", err)
 	} else {
-		log.Logout("INFO", "Commit", containerName, "to", imageName, "succeeded")
+		utils.Logout("INFO", "Commit", containerName, "to", imageName, "succeeded")
 	}
 	return nil
 }
@@ -149,7 +149,7 @@ Run a command in a container running in the background.
 func (*execCommand) execute(nonFlagNum int, argument []string) error {
 	//若已经指定了环境变量,说明C代码已经运行,直接返回以免重复调用
 	if os.Getenv(ENV_EXEC_PID) != "" {
-		log.Logout("INFO", "pid callback,pid:", os.Getegid())
+		utils.Logout("INFO", "pid callback,pid:", os.Getegid())
 		return nil
 	}
 	if nonFlagNum < 2 { //exec后缺少容器名或命令
@@ -180,7 +180,7 @@ func (*stopCommand) execute(nonFlagNum int, argument []string) error {
 	if err := stopContainer(argument[0]); err != nil {
 		return fmt.Errorf("stop container error->%v", err)
 	} else {
-		log.Logout("INFO", "Container stopped succeeded")
+		utils.Logout("INFO", "Container stopped succeeded")
 	}
 	return nil
 }
@@ -201,7 +201,7 @@ func (*rmCommand) execute(nonFlagNum int, argument []string) error {
 	if err := rmContainer(argument[0]); err != nil {
 		return fmt.Errorf("remove container error->%v", err)
 	} else {
-		log.Logout("INFO", "Remove container succeeded")
+		utils.Logout("INFO", "Remove container succeeded")
 	}
 	return nil
 }

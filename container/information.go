@@ -1,7 +1,7 @@
 package container
 
 import (
-	"coffer/log"
+	"coffer/utils"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -40,7 +40,7 @@ func StoreInfo(c ContainerInfo) error {
 	}
 	jsonString := string(jsonBytes)
 	dirURL := fmt.Sprintf(DefaultInfoLocation, c.Name) //string拼接成路径
-	if !PathExists(dirURL) {                           //如果路径不存在则创建
+	if !utils.PathExists(dirURL) {                     //如果路径不存在则创建
 		if err := os.MkdirAll(dirURL, 0622); err != nil {
 			return fmt.Errorf("mkdir error->%v", err)
 		}
@@ -62,9 +62,9 @@ func StoreInfo(c ContainerInfo) error {
 //删除容器信息
 func DeleteInfo(containerName string) {
 	dirURL := fmt.Sprintf(DefaultInfoLocation, containerName) //拼接路径
-	if PathExists(dirURL) {                                   //如果没有就不用删了
+	if utils.PathExists(dirURL) {                             //如果没有就不用删了
 		if err := os.RemoveAll(dirURL); err != nil {
-			log.Logout("ERROR", "Remove dir error->", err)
+			utils.Logout("ERROR", "Remove dir error->", err)
 		}
 	}
 }

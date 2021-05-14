@@ -2,7 +2,7 @@ package net
 
 import (
 	"coffer/container"
-	"coffer/log"
+	"coffer/utils"
 	"encoding/json"
 	"fmt"
 	"net"
@@ -17,6 +17,8 @@ import (
 	"github.com/vishvananda/netlink"
 	"github.com/vishvananda/netns"
 )
+
+const ipamDefaultAllocatorPath = "/var/run/coffer/network/ipam/subnet.json"
 
 var (
 	defaultNetworkPath = "/var/run/coffer/network/network/"
@@ -39,7 +41,7 @@ type Network struct {
 	Driver  string     //网络驱动名
 }
 
-type NetworkDriver interface {
+type NetworkDriver interface { //网络驱动接口
 	Name() string                                         //驱动名
 	Create(subnet string, name string) (*Network, error)  //创建网络
 	Delete(network Network) error                         //删除网络
@@ -47,49 +49,77 @@ type NetworkDriver interface {
 	Disconnect(network Network, endpoint *Endpoint) error //从网络上移除容器网络端点
 }
 
+//初始化一个IPAM对象
+var IpAllocator = &IPAM{
+	SubnetAllocatorPath: ipamDefaultAllocatorPath,
+}
+
 //创建网络
 func CreateNetwork(driver, subnet, name string) error {
-	//将网段字符串转换成net.IPNet对象
+	//ParseCIDR返回IP地址和该IP所在的网络和掩码。
+	//例如，ParseCIDR("192.168.100.1/16")会返回IP地址192.168.100.1和IP网络192.168.0.0/16。
 	_, cidr, _ := net.ParseCIDR(subnet)
 	//通过IPAM分配网关IP,获取到网段中第一个IP作为网关IP
-	ip, err := ipAllocator.Allocate(cidr)
+	gatewayIP, err := IpAllocator.Allocate(cidr)
 	if err != nil {
 		return err
 	}
-	cidr.IP = ip
-	//调用指定的网络驱动创建网络,
-	nw, err := drivers[driver].Create(cidr.String(), name)
+	cidr.IP = gatewayIP //使用ipam分配到的ip配合ParseCIDR解析ip出来的子网掩码
+	//调用指定的网络驱动创建网络,drivers map[string]NetworkDriver为各个网络驱动字典
+	network, err := drivers[driver].Create(cidr.String(), name)
 	if err != nil {
 		return err
 	}
 	//保存网络信息
-	return nw.dump(defaultNetworkPath)
+	return network.store(defaultNetworkPath)
 }
 
 //保存网络配置
-func (nw *Network) dump(dumpPath string) error {
-	if !container.PathExists(dumpPath) { //检查保存的目录是否存在,不存在则创建
-		if err := os.MkdirAll(dumpPath, 0644); err != nil {
+func (network *Network) store(storePath string) error {
+	if !utils.PathExists(storePath) { //检查保存的目录是否存在,不存在则创建
+		if err := os.MkdirAll(storePath, 0644); err != nil {
 			return err
 		}
 	}
 	//保存的文件名为网络名
-	nwPath := path.Join(dumpPath, nw.Name)
+	networkPath := path.Join(storePath, network.Name)
 	//打开文件用于写入,参数为:存在内容则清空,只写入,不存在则创建
-	nwFile, err := os.OpenFile(nwPath, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0644)
+	networkFile, err := os.OpenFile(networkPath, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
-		return fmt.Errorf("open %v error->%v", nwPath, err)
+		return fmt.Errorf("open %v error->%v", networkPath, err)
 	}
-	defer nwFile.Close()
+	defer networkFile.Close()
 	//json序列化网络对象到json字符串
-	nwJson, err := json.Marshal(nw)
+	networkJson, err := json.Marshal(network)
 	if err != nil {
 		return fmt.Errorf("marshal network json error->%v", err)
 	}
 	//写入网络配置
-	_, err = nwFile.Write(nwJson)
+	_, err = networkFile.Write(networkJson)
 	if err != nil {
 		return fmt.Errorf("write network file error->%v", err)
+	}
+	return nil
+}
+
+//读取网络配置
+func (network *Network) load(storePath string) error {
+	//打开配置文件
+	networkConfigFile, err := os.Open(storePath)
+	if err != nil {
+		return err
+	}
+	defer networkConfigFile.Close()
+	//从配置文件中读取网络配置的json字符串
+	networkJson := make([]byte, 2000)
+	n, err := networkConfigFile.Read(networkJson)
+	if err != nil {
+		return err
+	}
+	//json字符串反序列化为网络
+	err = json.Unmarshal(networkJson[:n], network)
+	if err != nil {
+		return fmt.Errorf("load network info error->%v", err)
 	}
 	return nil
 }
@@ -98,11 +128,11 @@ func ListNetwork() error {
 	w := tabwriter.NewWriter(os.Stdout, 12, 1, 3, ' ', 0)
 	fmt.Fprint(w, "NAME\tIpRange\tDriver\n")
 	//遍历网络信息
-	for _, nw := range networks {
+	for _, network := range networks {
 		fmt.Fprintf(w, "%s\t%s\t%s\n",
-			nw.Name,
-			nw.IpRange.String(),
-			nw.Driver,
+			network.Name,
+			network.IpRange.String(),
+			network.Driver,
 		)
 	}
 	//输出到标准输出
@@ -115,26 +145,26 @@ func ListNetwork() error {
 //删除网络
 func DeleteNetwork(networkName string) error {
 	//查找网络是否存在
-	nw, ok := networks[networkName]
+	network, ok := networks[networkName]
 	if !ok {
 		return fmt.Errorf("no such network: %s", networkName)
 	}
 	//释放网络网关的IP
-	if err := ipAllocator.Release(nw.IpRange, &nw.IpRange.IP); err != nil {
+	if err := IpAllocator.Release(network.IpRange, &network.IpRange.IP); err != nil {
 		return fmt.Errorf("remove network gateway ip error->%s", err)
 	}
 	//调用网络驱动删除网络创建的设备与配置
-	if err := drivers[nw.Driver].Delete(*nw); err != nil {
+	if err := drivers[network.Driver].Delete(*network); err != nil {
 		return fmt.Errorf("remove network driver error->%s", err)
 	}
 	//从网络的配置目录中删除该网络对应的配置文件
-	return nw.remove(defaultNetworkPath)
+	return network.remove(defaultNetworkPath)
 }
 
 //删除网络对应的配置文件
-func (nw *Network) remove(dumpPath string) error {
-	path := path.Join(dumpPath, nw.Name)
-	if container.PathExists(path) {
+func (network *Network) remove(storePath string) error {
+	path := path.Join(storePath, network.Name)
+	if utils.PathExists(path) {
 		if err := os.Remove(path); err != nil {
 			return err
 		}
@@ -155,44 +185,22 @@ func Init() error {
 		}
 	}
 	//检查网络配置目录中的所有文件
-	filepath.Walk(defaultNetworkPath, func(nwPath string, info os.FileInfo, err error) error {
-		if strings.HasSuffix(nwPath, "/") { //如果是目录则跳过
+	filepath.Walk(defaultNetworkPath, func(networkPath string, info os.FileInfo, err error) error {
+		if strings.HasSuffix(networkPath, "/") { //如果是目录则跳过
 			return nil
 		}
-		_, nwName := path.Split(nwPath) //加载文件名作为网络名
-		nw := &Network{
-			Name: nwName,
+		_, networkName := path.Split(networkPath) //加载文件名作为网络名
+		network := &Network{
+			Name: networkName,
 		}
 		//加载网络配置信息
-		if err := nw.load(nwPath); err != nil {
+		if err := network.load(networkPath); err != nil {
 			return fmt.Errorf("load network error->%s", err)
 		}
-		networks[nwName] = nw
+		networks[networkName] = network
 		return nil
 	})
-	log.Logout("INFO", "networks:", networks)
-	return nil
-}
-
-//读取网络配置
-func (nw *Network) load(dumpPath string) error {
-	//打开配置文件
-	nwConfigFile, err := os.Open(dumpPath)
-	if err != nil {
-		return err
-	}
-	defer nwConfigFile.Close()
-	//从配置文件中读取网络配置的json字符串
-	nwJson := make([]byte, 2000)
-	n, err := nwConfigFile.Read(nwJson)
-	if err != nil {
-		return err
-	}
-	//json字符串反序列化为网络
-	err = json.Unmarshal(nwJson[:n], nw)
-	if err != nil {
-		return fmt.Errorf("load network info error->%v", err)
-	}
+	utils.Logout("INFO", "networks:", networks)
 	return nil
 }
 
@@ -204,7 +212,7 @@ func Connect(networkName string, containerInfo *container.ContainerInfo) error {
 		return fmt.Errorf("no such network: %s", networkName)
 	}
 	// 从网络的IP段中分配容器IP地址
-	ip, err := ipAllocator.Allocate(network.IpRange)
+	ip, err := IpAllocator.Allocate(network.IpRange)
 	if err != nil {
 		return err
 	}
@@ -273,7 +281,7 @@ func configPortMapping(endpoint *Endpoint, cinfo *container.ContainerInfo) error
 		//分隔成宿主机的端口和容器的端口
 		portMapping := strings.Split(pm, ":")
 		if len(portMapping) != 2 {
-			log.Logout("ERROR", "port mapping format error", pm)
+			utils.Logout("ERROR", "port mapping format error", pm)
 			continue
 		}
 		//调用命令配置iptables
@@ -283,7 +291,7 @@ func configPortMapping(endpoint *Endpoint, cinfo *container.ContainerInfo) error
 		//执行iptables命令,添加端口映射转发规则
 		output, err := cmd.Output()
 		if err != nil {
-			log.Logout("ERROR", "Iptables Output:", output)
+			utils.Logout("ERROR", "Iptables Output:", output)
 			continue
 		}
 	}
@@ -295,7 +303,7 @@ func enterContainerNetns(enLink *netlink.Link, cinfo *container.ContainerInfo) f
 	//找到容器的net Namespace
 	f, err := os.OpenFile(fmt.Sprintf("/proc/%s/ns/net", cinfo.Pid), os.O_RDONLY, 0)
 	if err != nil {
-		log.Logout("ERROR", "get container net namespace error->", err.Error())
+		utils.Logout("ERROR", "get container net namespace error->", err.Error())
 	}
 	//取到文件描述符
 	nsFD := f.Fd()
@@ -303,16 +311,16 @@ func enterContainerNetns(enLink *netlink.Link, cinfo *container.ContainerInfo) f
 	runtime.LockOSThread()
 	// 修改veth peer 另外一端移到容器的namespace中
 	if err = netlink.LinkSetNsFd(*enLink, int(nsFD)); err != nil {
-		log.Logout("ERROR", "set link netns error->", err.Error())
+		utils.Logout("ERROR", "set link netns error->", err.Error())
 	}
 	// 获取当前的网络namespace
 	origns, err := netns.Get()
 	if err != nil {
-		log.Logout("ERROR", "get current netns error->", err.Error())
+		utils.Logout("ERROR", "get current netns error->", err.Error())
 	}
 	// 设置当前进程到新的网络namespace，并在函数执行完成之后再恢复到之前的namespace
 	if err = netns.Set(netns.NsHandle(nsFD)); err != nil {
-		log.Logout("ERROR", "set netns error->", err.Error())
+		utils.Logout("ERROR", "set netns error->", err.Error())
 	}
 	//返回之前net Namespace的函数
 	return func() {
