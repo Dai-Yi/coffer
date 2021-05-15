@@ -1,8 +1,8 @@
 package subsys
 
 import (
+	"coffer/utils"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path"
 	"strconv"
@@ -15,8 +15,16 @@ type MemorySubsystem struct {
 func (s *MemorySubsystem) Apply(cgroupPath string, pid int) error {
 	if subsysCgroupPath, err := GetCgroupPath(s.Name(), cgroupPath, false); err == nil {
 		//进程pid写入cgroup下task文件中
-		if err := ioutil.WriteFile(path.Join(subsysCgroupPath, "tasks"),
-			[]byte(strconv.Itoa(pid)), 0644); err != nil {
+		memoryTaskFile, err := os.OpenFile(path.Join(subsysCgroupPath, "tasks"),
+			os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			return fmt.Errorf("open %v error->%v", memoryTaskFile.Name(), err)
+		}
+		defer memoryTaskFile.Close()
+		utils.Lock(memoryTaskFile)
+		_, err = memoryTaskFile.Write([]byte(strconv.Itoa(pid)))
+		utils.UnLock(memoryTaskFile)
+		if err != nil {
 			return fmt.Errorf("set cgroup proc error->%v", err)
 		}
 		return nil
@@ -39,8 +47,16 @@ func (s *MemorySubsystem) Set(cgroupPath string, res *ResourceConfig) error {
 	if subsysCgroupPath, err := GetCgroupPath(s.Name(), cgroupPath, true); err == nil {
 		if res.MemoryLimit != "" {
 			//将限制写入到memory.limit_in_bytes即可实现限制内存
-			if err := ioutil.WriteFile(path.Join(subsysCgroupPath, "memory.limit_in_bytes"),
-				[]byte(res.MemoryLimit), 0644); err != nil {
+			memoryFile, err := os.OpenFile(path.Join(subsysCgroupPath, "memory.limit_in_bytes"),
+				os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+			if err != nil {
+				return fmt.Errorf("open %v error->%v", memoryFile.Name(), err)
+			}
+			defer memoryFile.Close()
+			utils.Lock(memoryFile)
+			_, err = memoryFile.Write([]byte(res.MemoryLimit))
+			utils.UnLock(memoryFile)
+			if err != nil {
 				return fmt.Errorf("set cgroup memory error->%v", err)
 			}
 		}

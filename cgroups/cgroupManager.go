@@ -34,10 +34,3 @@ func (c *CgroupManager) Set(res *subsys.ResourceConfig) error { //改
 	}
 	return nil
 }
-func (c *CgroupManager) Name() { //查
-	var temp []string
-	for _, subsystem := range subsys.SubsystemsList {
-		temp = append(temp, subsystem.Name()) //调用每个subsystem的Name方法
-	}
-	utils.Logout("INFO", "subsystems name:", temp)
-}

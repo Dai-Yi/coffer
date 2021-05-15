@@ -23,7 +23,9 @@ func pipeSend(msgList interface{}, writePipe *os.File) {
 		val2 := msgList.(string) //断言是否为string类型
 		msgStr = val2
 	}
+	utils.Lock(writePipe)         //加锁
 	writePipe.WriteString(msgStr) //命令写入管道
+	utils.UnLock(writePipe)       //解锁
 	writePipe.Close()             //关闭写入端
 }
 func duplicateQuery(id string, Name string) (string, error) {

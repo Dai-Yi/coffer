@@ -52,8 +52,12 @@ func StoreInfo(c ContainerInfo) error {
 		return fmt.Errorf("create json file error->%v", err)
 	}
 	defer file.Close()
+	utils.Lock(file) //加锁
 	//将json化之后的数据写入文件
-	if _, err := file.WriteString(jsonString); err != nil {
+	_, err = file.WriteString(jsonString)
+	//无论写入成功与否都解锁
+	utils.UnLock(file)
+	if err != nil {
 		return fmt.Errorf("write file error->%v", err)
 	}
 	return nil

@@ -2,9 +2,11 @@ package cmd
 
 import (
 	"coffer/container"
+	"coffer/utils"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"os"
 	"strconv"
 	"syscall"
 )
@@ -40,8 +42,16 @@ func stopContainer(containerName string) error {
 	dirURL := fmt.Sprintf(container.DefaultInfoLocation, containerName)
 	configFilePath := dirURL + container.ConfigFile
 	//写入修改后的数据覆盖容器原来的容器信息
-	if err := ioutil.WriteFile(configFilePath, newContentBytes, 0622); err != nil {
-		return fmt.Errorf("write file %s error->%v", configFilePath, err)
+	configFile, err := os.OpenFile(configFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return fmt.Errorf("open %v error->%v", configFile.Name(), err)
+	}
+	defer configFile.Close()
+	utils.Lock(configFile)
+	_, err = configFile.Write(newContentBytes)
+	utils.UnLock(configFile)
+	if err != nil {
+		return fmt.Errorf("write file %v error->%v", configFile.Name(), err)
 	}
 	return nil
 }

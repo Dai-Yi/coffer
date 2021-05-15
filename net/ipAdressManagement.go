@@ -22,7 +22,7 @@ func (ipam *IPAM) load() error {
 		return nil
 	}
 	//打开并读取存储文件
-	subnetConfigFile, err := os.Open(ipam.SubnetAllocatorPath)
+	subnetConfigFile, err := os.Open(ipam.SubnetAllocatorPath) //os.open用于读
 	if err != nil {
 		return err
 	}
@@ -41,7 +41,7 @@ func (ipam *IPAM) load() error {
 }
 
 //存储网段地址分配信息
-func (ipam *IPAM) dump() error {
+func (ipam *IPAM) store() error {
 	//检查存储文件所在文件夹是否存在,如果不存在则创建
 	ipamConfigFileDir, _ := path.Split(ipam.SubnetAllocatorPath)
 	if !utils.PathExists(ipamConfigFileDir) {
@@ -60,8 +60,10 @@ func (ipam *IPAM) dump() error {
 	if err != nil {
 		return err
 	}
+	utils.Lock(subnetConfigFile)
 	//将序列化后的json字符串写入到配置文件
 	_, err = subnetConfigFile.Write(ipamConfigJson)
+	utils.UnLock(subnetConfigFile)
 	if err != nil {
 		return err
 	}
@@ -104,7 +106,7 @@ func (ipam *IPAM) Allocate(subnet *net.IPNet) (ip net.IP, err error) {
 		}
 	}
 	//将分配结果保存到文件中
-	ipam.dump()
+	ipam.store()
 	return
 }
 
@@ -131,6 +133,6 @@ func (ipam *IPAM) Release(subnet *net.IPNet, ipaddr *net.IP) error {
 	ipalloc[c] = '0'
 	(*ipam.Subnets)[subnet.String()] = string(ipalloc)
 	//保存释放掉IP后的网段IP分配信息
-	ipam.dump()
+	ipam.store()
 	return nil
 }

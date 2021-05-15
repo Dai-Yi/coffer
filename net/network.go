@@ -57,7 +57,7 @@ var IpAllocator = &IPAM{
 //创建网络
 func CreateNetwork(driver, subnet, name string) error {
 	//ParseCIDR返回IP地址和该IP所在的网络和掩码。
-	//例如，ParseCIDR("192.168.100.1/16")会返回IP地址192.168.100.1和IP网络192.168.0.0/16。
+	//例如，ParseCIDR("192.168.100.1/16")会返回IP地址192.168.100.1和IP网络192.168.0.0/16
 	_, cidr, _ := net.ParseCIDR(subnet)
 	//通过IPAM分配网关IP,获取到网段中第一个IP作为网关IP
 	gatewayIP, err := IpAllocator.Allocate(cidr)
@@ -81,8 +81,11 @@ func (network *Network) store(storePath string) error {
 			return err
 		}
 	}
-	//保存的文件名为网络名
-	networkPath := path.Join(storePath, network.Name)
+	networkPath := path.Join(storePath, network.Name) //保存的文件名为网络名
+	//存入前先检查网络名是否存在
+	if utils.PathExists(networkPath) { //若存在则需重新命名
+		return fmt.Errorf("network name existed,please rename")
+	}
 	//打开文件用于写入,参数为:存在内容则清空,只写入,不存在则创建
 	networkFile, err := os.OpenFile(networkPath, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
@@ -95,7 +98,9 @@ func (network *Network) store(storePath string) error {
 		return fmt.Errorf("marshal network json error->%v", err)
 	}
 	//写入网络配置
+	utils.Lock(networkFile) //加锁
 	_, err = networkFile.Write(networkJson)
+	utils.UnLock(networkFile) //解锁
 	if err != nil {
 		return fmt.Errorf("write network file error->%v", err)
 	}
@@ -105,7 +110,7 @@ func (network *Network) store(storePath string) error {
 //读取网络配置
 func (network *Network) load(storePath string) error {
 	//打开配置文件
-	networkConfigFile, err := os.Open(storePath)
+	networkConfigFile, err := os.Open(storePath) //os.open用于读
 	if err != nil {
 		return err
 	}
