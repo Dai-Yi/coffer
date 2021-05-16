@@ -23,9 +23,7 @@ func stopContainer(containerName string) error {
 		return fmt.Errorf("conver pid from string to int error->%v", err)
 	}
 	//发送kill信号给容器进程
-	if err := syscall.Kill(pidInt, syscall.SIGTERM); err != nil {
-		return fmt.Errorf("stop container %s error->%v", containerName, err)
-	}
+	syscall.Kill(pidInt, syscall.SIGTERM)
 	//根据容器名获取对应的容器信息对象
 	containerInfo, err := getContainerInfoByName(containerName)
 	if err != nil {

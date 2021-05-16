@@ -27,7 +27,7 @@ func execContainer(containerName string, comArray []string) error {
 	utils.Logout("INFO", "command", cmdStr)
 	//调用自己,创建出一个子进程
 	cmd := exec.Command("/proc/self/exe", "exec")
-	cmd.Stdin = os.Stdin
+	cmd.Stdin = os.Stdin //使用交互模式
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	//使用已经启用的环境变量和命令

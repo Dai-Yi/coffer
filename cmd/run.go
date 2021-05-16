@@ -30,9 +30,9 @@ func pipeSend(msgList interface{}, writePipe *os.File) {
 }
 func duplicateQuery(id string, Name string) (string, error) {
 	var newID string
-	containers, err := listContainers()
-	if err != nil {
-		return "", fmt.Errorf("list containers error")
+	containers, _ := listContainers()
+	if containers == nil { //如果未创建过容器则直接创建
+		return id, nil
 	}
 	for _, item := range containers {
 		if item.Name == Name { //名字重复则直接返回错误
@@ -95,8 +95,9 @@ func run(tty bool, volume string, containerName string, imageName string, networ
 			return fmt.Errorf("connect network error->%v", err)
 		}
 	}
-	pipeSend(cmdList, writePipe) //传递命令给容器
-	containerProcess.Wait()      //后台进程等待容器内进程结束
+	msg := append(cmdList, containerName) //将容器名附到命令中传递给容器
+	pipeSend(msg, writePipe)              //传递命令给容器
+	containerProcess.Wait()               //后台进程等待容器内进程结束
 	if tty {
 		defer cgroupManager.Destroy() //运行完后销毁cgroup manager
 		container.DeleteInfo(containerName)

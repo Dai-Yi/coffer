@@ -31,7 +31,7 @@ func NewProcess(tty bool, volume string, environment []string, containerName str
 	} else { //后台运行则输出到log文件
 		dirURL := fmt.Sprintf(DefaultInfoLocation, containerName)
 		if !utils.PathExists(dirURL) {
-			if err := os.MkdirAll(dirURL, 0622); err != nil {
+			if err := os.MkdirAll(dirURL, 0644); err != nil {
 				return nil, nil, fmt.Errorf("container process mkdir error->%v", err)
 			}
 		}
@@ -69,6 +69,9 @@ func InitializeContainer() error { //容器内部初始化
 		return fmt.Errorf("run container get user command error->command list is empty")
 	}
 	cmdList := strings.Split(tempList, " ")
+	containerName := cmdList[len(cmdList)-1] //容器名在传输消息的最后一个
+	utils.SetProcessName(containerName)      //设置容器进程名
+	cmdList = cmdList[:len(cmdList)-1]
 	if err := setMount(); err != nil {
 		return fmt.Errorf("set mount error->%v", err)
 	}
