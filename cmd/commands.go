@@ -54,7 +54,7 @@ func (*runCommand) execute(nonFlagNum int, argument []string) error {
 	env := os.Getenv(container.ENV_RUN)      //获取环境变量判断当前是否为后台进程
 	if !interactive && env != "background" { //如果需要后台运行但当前并非后台进程则转换为后台进程
 		if err := transform(); err != nil {
-			return fmt.Errorf("transform self into background error")
+			return fmt.Errorf("transform self into background error->%v", err)
 		}
 		return nil
 	} //到这里时，肯定是前台运行或后台守护进程已启动
@@ -114,7 +114,7 @@ func (*psCommand) execute(nonFlagNum int, argument []string) error {
 		return fmt.Errorf("error command:Redundant commands")
 	}
 	if err := printContainers(); err != nil {
-		return fmt.Errorf("print containers error->%v", err.Error())
+		return fmt.Errorf("print containers error->%v", err)
 	}
 	return nil
 }

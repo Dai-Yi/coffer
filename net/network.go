@@ -281,23 +281,25 @@ func configEndpointIpAddressAndRoute(endpoint *Endpoint, cinfo *container.Contai
 
 //配置端口映射
 func configPortMapping(endpoint *Endpoint, cinfo *container.ContainerInfo) error {
-	//遍历容器端口映射列表
-	for _, pm := range endpoint.PortMapping {
-		//分隔成宿主机的端口和容器的端口
-		portMapping := strings.Split(pm, ":")
-		if len(portMapping) != 2 {
-			utils.Logout("ERROR", "port mapping format error", pm)
-			continue
-		}
-		//调用命令配置iptables
-		iptablesCmd := fmt.Sprintf("-t nat -A PREROUTING -p tcp -m tcp --dport %s -j DNAT --to-destination %s:%s",
-			portMapping[0], endpoint.IPAddress.String(), portMapping[1])
-		cmd := exec.Command("iptables", strings.Split(iptablesCmd, " ")...)
-		//执行iptables命令,添加端口映射转发规则
-		output, err := cmd.Output()
-		if err != nil {
-			utils.Logout("ERROR", "Iptables Output:", output)
-			continue
+	if endpoint.PortMapping != nil {
+		//遍历容器端口映射列表
+		for _, pm := range endpoint.PortMapping {
+			//分隔成宿主机的端口和容器的端口
+			portMapping := strings.Split(pm, ":")
+			if len(portMapping) != 2 {
+				utils.Logout("ERROR", "port mapping format error", pm)
+				continue
+			}
+			//调用命令配置iptables
+			iptablesCmd := fmt.Sprintf("-t nat -A PREROUTING -p tcp -m tcp --dport %s -j DNAT --to-destination %s:%s",
+				portMapping[0], endpoint.IPAddress.String(), portMapping[1])
+			cmd := exec.Command("iptables", strings.Split(iptablesCmd, " ")...)
+			//执行iptables命令,添加端口映射转发规则
+			output, err := cmd.Output()
+			if err != nil {
+				utils.Logout("ERROR", "Iptables Output:", output)
+				continue
+			}
 		}
 	}
 	return nil

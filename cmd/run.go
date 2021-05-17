@@ -67,6 +67,9 @@ func run(tty bool, volume string, containerName string, imageName string, networ
 		return fmt.Errorf("container start error->%v", err)
 	}
 	port := strings.Split(portmapping, ",")
+	if portmapping == "" { //若portmapping为空则port赋为空
+		port = nil
+	}
 	containerInfo := container.ContainerInfo{
 		Id:          containerID,
 		Pid:         strconv.Itoa(containerProcess.Process.Pid),
@@ -95,9 +98,8 @@ func run(tty bool, volume string, containerName string, imageName string, networ
 			return fmt.Errorf("connect network error->%v", err)
 		}
 	}
-	msg := append(cmdList, containerName) //将容器名附到命令中传递给容器
-	pipeSend(msg, writePipe)              //传递命令给容器
-	containerProcess.Wait()               //后台进程等待容器内进程结束
+	pipeSend(cmdList, writePipe) //传递命令给容器
+	containerProcess.Wait()      //后台进程等待容器内进程结束
 	if tty {
 		defer cgroupManager.Destroy() //运行完后销毁cgroup manager
 		container.DeleteInfo(containerName)

@@ -69,9 +69,6 @@ func InitializeContainer() error { //容器内部初始化
 		return fmt.Errorf("run container get user command error->command list is empty")
 	}
 	cmdList := strings.Split(tempList, " ")
-	containerName := cmdList[len(cmdList)-1] //容器名在传输消息的最后一个
-	utils.SetProcessName(containerName)      //设置容器进程名
-	cmdList = cmdList[:len(cmdList)-1]
 	if err := setMount(); err != nil {
 		return fmt.Errorf("set mount error->%v", err)
 	}

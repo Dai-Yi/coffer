@@ -13,7 +13,7 @@ import (
 func printContainers() error {
 	containers, err := listContainers()
 	if err != nil {
-		return fmt.Errorf("list containers error")
+		return fmt.Errorf("list containers error->%v", err)
 	}
 	//打印控制台信息
 	writer := tabwriter.NewWriter(os.Stdout, 12, 1, 3, ' ', 0)
