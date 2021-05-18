@@ -18,7 +18,7 @@ func (s *CpusetSubsystem) Apply(cgroupPath string, pid int) error { //将进程�
 		cpusetTaskFile, err := os.OpenFile(path.Join(subsysCgroupPath, "tasks"),
 			os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
-			return fmt.Errorf("open %v error->%v", cpusetTaskFile.Name(), err)
+			return fmt.Errorf("open file %s error->%v", cpusetTaskFile.Name(), err)
 		}
 		defer cpusetTaskFile.Close()
 		utils.Lock(cpusetTaskFile)
@@ -38,7 +38,7 @@ func (s *CpusetSubsystem) Remove(cgroupPath string) error {
 	if subsysCgroupPath, err := GetCgroupPath(s.Name(), cgroupPath, false); err == nil {
 		return os.RemoveAll(subsysCgroupPath) //删除对应目录即删除对应cgroup
 	} else {
-		return err
+		return fmt.Errorf("get cgroup path error->%v", err)
 	}
 }
 
@@ -49,7 +49,7 @@ func (s *CpusetSubsystem) Set(cgroupPath string, res *ResourceConfig) error {
 			cpusetCpusFile, err := os.OpenFile(path.Join(subsysCgroupPath, "cpuset.cpus"),
 				os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 			if err != nil {
-				return fmt.Errorf("open %v error->%v", cpusetCpusFile.Name(), err)
+				return fmt.Errorf("open file %s error->%v", cpusetCpusFile.Name(), err)
 			}
 			defer cpusetCpusFile.Close()
 			utils.Lock(cpusetCpusFile)
@@ -62,7 +62,7 @@ func (s *CpusetSubsystem) Set(cgroupPath string, res *ResourceConfig) error {
 		if res.Cpuset.Mems != "" {
 			cpusetMemsFile, err := os.OpenFile(path.Join(subsysCgroupPath, "cpuset.mems"), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 			if err != nil {
-				return fmt.Errorf("open %v error->%v", cpusetMemsFile.Name(), err)
+				return fmt.Errorf("open file %s error->%v", cpusetMemsFile.Name(), err)
 			}
 			defer cpusetMemsFile.Close()
 			utils.Lock(cpusetMemsFile)
@@ -74,7 +74,7 @@ func (s *CpusetSubsystem) Set(cgroupPath string, res *ResourceConfig) error {
 		}
 		return nil
 	} else {
-		return err
+		return fmt.Errorf("get cgroup path error->%v", err)
 	}
 }
 

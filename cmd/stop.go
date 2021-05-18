@@ -42,14 +42,14 @@ func stopContainer(containerName string) error {
 	//写入修改后的数据覆盖容器原来的容器信息
 	configFile, err := os.OpenFile(configFilePath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 	if err != nil {
-		return fmt.Errorf("open %v error->%v", configFile.Name(), err)
+		return fmt.Errorf("open file %s error->%v", configFile.Name(), err)
 	}
 	defer configFile.Close()
 	utils.Lock(configFile)
 	_, err = configFile.Write(newContentBytes)
 	utils.UnLock(configFile)
 	if err != nil {
-		return fmt.Errorf("write file %v error->%v", configFile.Name(), err)
+		return fmt.Errorf("write file %s error->%v", configFile.Name(), err)
 	}
 	return nil
 }
@@ -66,7 +66,7 @@ func getContainerInfoByName(containerName string) (*container.ContainerInfo, err
 	var containerInfo container.ContainerInfo
 	//将容器信息字符串反序列化为容器信息对象
 	if err := json.Unmarshal(contentBytes, &containerInfo); err != nil {
-		return nil, fmt.Errorf("json unmarshal %v error->%v", containerName, err)
+		return nil, fmt.Errorf("json unmarshal %s error->%v", containerName, err)
 	}
 	return &containerInfo, nil
 }

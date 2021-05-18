@@ -62,13 +62,13 @@ func CreateNetwork(driver, subnet, name string) error {
 	//通过IPAM分配网关IP,获取到网段中第一个IP作为网关IP
 	gatewayIP, err := IpAllocator.Allocate(cidr)
 	if err != nil {
-		return err
+		return fmt.Errorf("allocate ip error->%v", err)
 	}
 	cidr.IP = gatewayIP //使用ipam分配到的ip配合ParseCIDR解析ip出来的子网掩码
 	//调用指定的网络驱动创建网络,drivers map[string]NetworkDriver为各个网络驱动字典
 	network, err := drivers[driver].Create(cidr.String(), name)
 	if err != nil {
-		return err
+		return fmt.Errorf("create network driver error->%v", err)
 	}
 	//保存网络信息
 	return network.store(defaultNetworkPath)
@@ -78,7 +78,7 @@ func CreateNetwork(driver, subnet, name string) error {
 func (network *Network) store(storePath string) error {
 	if !utils.PathExists(storePath) { //检查保存的目录是否存在,不存在则创建
 		if err := os.MkdirAll(storePath, 0644); err != nil {
-			return err
+			return fmt.Errorf("make dir %s error->%v", storePath, err)
 		}
 	}
 	networkPath := path.Join(storePath, network.Name) //保存的文件名为网络名
@@ -89,7 +89,7 @@ func (network *Network) store(storePath string) error {
 	//打开文件用于写入,参数为:存在内容则清空,只写入,不存在则创建
 	networkFile, err := os.OpenFile(networkPath, os.O_TRUNC|os.O_WRONLY|os.O_CREATE, 0644)
 	if err != nil {
-		return fmt.Errorf("open %v error->%v", networkPath, err)
+		return fmt.Errorf("open file %s error->%v", networkFile.Name(), err)
 	}
 	defer networkFile.Close()
 	//json序列化网络对象到json字符串
@@ -112,14 +112,14 @@ func (network *Network) load(storePath string) error {
 	//打开配置文件
 	networkConfigFile, err := os.Open(storePath) //os.open用于读
 	if err != nil {
-		return err
+		return fmt.Errorf("open file %s error->%v", networkConfigFile.Name(), err)
 	}
 	defer networkConfigFile.Close()
 	//从配置文件中读取网络配置的json字符串
 	networkJson := make([]byte, 2000)
 	n, err := networkConfigFile.Read(networkJson)
 	if err != nil {
-		return err
+		return fmt.Errorf("read network config file error->%v", err)
 	}
 	//json字符串反序列化为网络
 	err = json.Unmarshal(networkJson[:n], network)
@@ -171,7 +171,7 @@ func (network *Network) remove(storePath string) error {
 	path := path.Join(storePath, network.Name)
 	if utils.PathExists(path) {
 		if err := os.Remove(path); err != nil {
-			return err
+			return fmt.Errorf("remove file %s error->%v", path, err)
 		}
 	}
 	return nil
@@ -182,16 +182,12 @@ func Init() error {
 	var bridgeDriver = BridgeNetworkDriver{}
 	drivers[bridgeDriver.Name()] = &bridgeDriver
 	//判断网络的配置目录是否存在,不存在则创建
-	if _, err := os.Stat(defaultNetworkPath); err != nil {
-		if os.IsNotExist(err) {
-			os.MkdirAll(defaultNetworkPath, 0644)
-		} else {
-			return err
-		}
+	if !utils.PathExists(defaultNetworkPath) {
+		os.MkdirAll(defaultNetworkPath, 0644)
 	}
 	//检查网络配置目录中的所有文件
 	filepath.Walk(defaultNetworkPath, func(networkPath string, info os.FileInfo, err error) error {
-		if strings.HasSuffix(networkPath, "/") { //如果是目录则跳过
+		if info.IsDir() { //如果是目录则跳过
 			return nil
 		}
 		_, networkName := path.Split(networkPath) //加载文件名作为网络名
@@ -205,7 +201,7 @@ func Init() error {
 		networks[networkName] = network
 		return nil
 	})
-	utils.Logout("INFO", "networks:", networks)
+	utils.Logout("INFO", "initialize network complete")
 	return nil
 }
 
@@ -219,7 +215,7 @@ func Connect(networkName string, containerInfo *container.ContainerInfo) error {
 	// 从网络的IP段中分配容器IP地址
 	ip, err := IpAllocator.Allocate(network.IpRange)
 	if err != nil {
-		return err
+		return fmt.Errorf("allocate ip error->%v", err)
 	}
 	// 创建网络端点
 	endpoint := &Endpoint{
@@ -230,11 +226,11 @@ func Connect(networkName string, containerInfo *container.ContainerInfo) error {
 	}
 	// 调用网络驱动挂载和配置网络端点
 	if err = drivers[network.Driver].Connect(network, endpoint); err != nil {
-		return err
+		return fmt.Errorf("network driver connect error->%v", err)
 	}
 	// 到容器的namespace配置容器网络设备IP地址
 	if err = configEndpointIpAddressAndRoute(endpoint, containerInfo); err != nil {
-		return err
+		return fmt.Errorf("config endpoind ip and route error->%v", err)
 	}
 	//配置容器到宿主机的端口映射
 	return configPortMapping(endpoint, containerInfo)
@@ -254,15 +250,15 @@ func configEndpointIpAddressAndRoute(endpoint *Endpoint, cinfo *container.Contai
 	interfaceIP.IP = endpoint.IPAddress
 	//设置容器内Veth端点的IP
 	if err = setInterfaceIP(endpoint.Device.PeerName, interfaceIP.String()); err != nil {
-		return fmt.Errorf("set interface ip %v error->%s", endpoint.Network, err)
+		return fmt.Errorf("set interface ip %s error->%v", endpoint.Network.Name, err)
 	}
 	//启动容器内的Veth端点
 	if err = setInterfaceUP(endpoint.Device.PeerName); err != nil {
-		return err
+		return fmt.Errorf("set endpoint up error->%v", err)
 	}
 	//设置网络接口为UP状态
 	if err = setInterfaceUP("lo"); err != nil {
-		return err
+		return fmt.Errorf("set lo up error->%v", err)
 	}
 	//设置容器内的外部请求都通过容器内的Veth端点访问
 	_, cidr, _ := net.ParseCIDR("0.0.0.0/0")
@@ -274,7 +270,7 @@ func configEndpointIpAddressAndRoute(endpoint *Endpoint, cinfo *container.Contai
 	}
 	//添加路由到容器的网络空间
 	if err = netlink.RouteAdd(defaultRoute); err != nil {
-		return err
+		return fmt.Errorf("add route error->%v", err)
 	}
 	return nil
 }

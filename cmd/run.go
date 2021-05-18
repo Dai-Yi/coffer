@@ -36,7 +36,7 @@ func duplicateQuery(id string, Name string) (string, error) {
 	}
 	for _, item := range containers {
 		if item.Name == Name { //名字重复则直接返回错误
-			return "", fmt.Errorf("container named %v has existed,please rename", Name)
+			return "", fmt.Errorf("container named %s has existed,please rename", Name)
 		}
 		if item.Id == id {
 			newID, _ = duplicateQuery(idGenerator(), Name) //若id重复则递归生成新id,直到不重复
@@ -55,7 +55,7 @@ func run(tty bool, volume string, containerName string, imageName string, networ
 	}
 	containerID, err := duplicateQuery(containerID, containerName) //查询id或name是否重复
 	if err != nil {
-		return err
+		return fmt.Errorf("query contianer id and contianer name error->%v", err)
 	}
 	env := strings.Split(environment, ",") //根据空格拆分为多个用户定义的环境变量
 	//创建容器进程和管道
@@ -86,11 +86,11 @@ func run(tty bool, volume string, containerName string, imageName string, networ
 	//创建cgroup manager，并通过set和apply设置资源限制
 	cgroupManager := cgroups.CgroupManager{CgroupPath: containerID}
 	if err := cgroupManager.Set(res); err != nil { //设置容器限制
-		return err
+		return fmt.Errorf("set cgroup manager error->%v", err)
 	}
 	//将容器进程加入到各个子系统
 	if err := cgroupManager.Apply(containerProcess.Process.Pid); err != nil {
-		return err
+		return fmt.Errorf("apply cgroup manager error->%v", err)
 	}
 	if network != "" { //配置网络信息
 		net.Init()                                                   //初始化网络

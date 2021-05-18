@@ -39,7 +39,7 @@ func createReadOnlyLayer(image string) error {
 	if !utils.PathExists(program) { //没有可执行程序的目录
 		utils.Logout("WARN", image, "not found,try to untar", image+".tar")
 		if !utils.PathExists(imageURL) { //没有可解压的.tar文件
-			return fmt.Errorf("%v does not exist", imageURL)
+			return fmt.Errorf("%s does not exist", imageURL)
 		}
 		if err := os.MkdirAll(program, 0622); err != nil {
 			return fmt.Errorf("mkdir error->%v", err)

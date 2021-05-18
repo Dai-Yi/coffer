@@ -18,7 +18,7 @@ func (s *MemorySubsystem) Apply(cgroupPath string, pid int) error {
 		memoryTaskFile, err := os.OpenFile(path.Join(subsysCgroupPath, "tasks"),
 			os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
-			return fmt.Errorf("open %v error->%v", memoryTaskFile.Name(), err)
+			return fmt.Errorf("open file %s error->%v", memoryTaskFile.Name(), err)
 		}
 		defer memoryTaskFile.Close()
 		utils.Lock(memoryTaskFile)
@@ -38,7 +38,7 @@ func (s *MemorySubsystem) Remove(cgroupPath string) error {
 	if subsysCgroupPath, err := GetCgroupPath(s.Name(), cgroupPath, false); err == nil {
 		return os.RemoveAll(subsysCgroupPath) //删除对应目录即删除对应cgroup
 	} else {
-		return err
+		return fmt.Errorf("get cgroup path error->%v", err)
 	}
 }
 
@@ -50,7 +50,7 @@ func (s *MemorySubsystem) Set(cgroupPath string, res *ResourceConfig) error {
 			memoryFile, err := os.OpenFile(path.Join(subsysCgroupPath, "memory.limit_in_bytes"),
 				os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
 			if err != nil {
-				return fmt.Errorf("open %v error->%v", memoryFile.Name(), err)
+				return fmt.Errorf("open file %s error->%v", memoryFile.Name(), err)
 			}
 			defer memoryFile.Close()
 			utils.Lock(memoryFile)
@@ -62,7 +62,7 @@ func (s *MemorySubsystem) Set(cgroupPath string, res *ResourceConfig) error {
 		}
 		return nil
 	} else {
-		return err
+		return fmt.Errorf("get cgroup path error->%v", err)
 	}
 }
 

@@ -11,7 +11,7 @@ import (
 //模式:LOCK_NB非阻塞模式,默认阻塞模式
 func Lock(file *os.File) error {
 	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX); err != nil {
-		return fmt.Errorf("lock file %v failed->%v", file.Name(), err)
+		return fmt.Errorf("lock file %s failed->%v", file.Name(), err)
 	}
 	return nil
 }
@@ -19,7 +19,7 @@ func Lock(file *os.File) error {
 // LOCK_UN解锁
 func UnLock(file *os.File) error {
 	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_UN); err != nil {
-		return fmt.Errorf("unlock file %v failed->%v", file.Name(), err)
+		return fmt.Errorf("unlock file %s failed->%v", file.Name(), err)
 	}
 	return nil
 }

@@ -40,7 +40,7 @@ func (d *BridgeNetworkDriver) Delete(network Network) error {
 	bridgeName := network.Name
 	br, err := netlink.LinkByName(bridgeName)
 	if err != nil {
-		return err
+		return fmt.Errorf("find bridge error->%v", err)
 	}
 	return netlink.LinkDel(br)
 }
@@ -52,7 +52,7 @@ func (d *BridgeNetworkDriver) Connect(network *Network, endpoint *Endpoint) erro
 	//通过接口名获取到Bridge接口的对象和接口属性
 	br, err := netlink.LinkByName(bridgeName)
 	if err != nil {
-		return err
+		return fmt.Errorf("find bridge error->%v", err)
 	}
 	//创建Veth接口的配置
 	la := netlink.NewLinkAttrs()
@@ -126,7 +126,7 @@ func createBridgeInterface(bridgeName string) error {
 	_, err := net.InterfaceByName(bridgeName)
 	//如果已经存在了或者错误则返回
 	if err == nil || !strings.Contains(err.Error(), "no such network interface") {
-		return err
+		return nil
 	}
 	//初始化一个netlink的Link对象
 	la := netlink.NewLinkAttrs()
@@ -172,16 +172,16 @@ func setInterfaceIP(name string, rawIP string) error {
 	//返回值包含网段信息和ip
 	ipNet, err := netlink.ParseIPNet(rawIP)
 	if err != nil {
-		return err
+		return fmt.Errorf("prase ip error->%v", err)
 	}
 	//给网络接口配置地址
 	addr := &netlink.Addr{IPNet: ipNet, Peer: ipNet, Label: "", Flags: 0, Scope: 0, Broadcast: nil}
 	return netlink.AddrAdd(iface, addr)
 }
 
-//设置iptables对应Bridge的MASQUERADE规则
+//设置防火墙对应Bridge的MASQUERADE规则
 func setupIPTables(bridgeName string, subnet *net.IPNet) error {
-	//通过命令的方式来配置
+	//通过命令的方式来配置防火墙,!表示该ip除外
 	iptablesCmd := fmt.Sprintf("-t nat -A POSTROUTING -s %s ! -o %s -j MASQUERADE", subnet.String(), bridgeName)
 	cmd := exec.Command("iptables", strings.Split(iptablesCmd, " ")...)
 	//执行iptables命令配置SNAT规则
