@@ -287,7 +287,7 @@ func configPortMapping(endpoint *Endpoint, cinfo *container.ContainerInfo) error
 				continue
 			}
 			//调用命令配置iptables
-			iptablesCmd := fmt.Sprintf("-t nat -A PREROUTING -p tcp -m tcp --dport %s -j DNAT --to-destination %s:%s",
+			iptablesCmd := fmt.Sprintf("-t nat -A OUTPUT -p tcp -m tcp --dport %s -j DNAT --to %s:%s",
 				portMapping[0], endpoint.IPAddress.String(), portMapping[1])
 			cmd := exec.Command("iptables", strings.Split(iptablesCmd, " ")...)
 			//执行iptables命令,添加端口映射转发规则
