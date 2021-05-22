@@ -31,6 +31,7 @@ Options:
 	-cpuset-mems		MEMs in which to allow execution
 	-name			Assign a name to the container
 	-e			Set environment variables(can be used multiple times at one time)
+	-port			Implement port mapping so that the external network can access the container, <host port>:<container port>
 `)
 }
 func (*runCommand) execute(nonFlagNum int, argument []string) error {

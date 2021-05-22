@@ -84,7 +84,7 @@ func run(tty bool, volume string, containerName string, imageName string, networ
 		return fmt.Errorf("store container information error->%v", err)
 	}
 	//创建cgroup manager，并通过set和apply设置资源限制
-	cgroupManager := cgroups.CgroupManager{CgroupPath: containerID}
+	cgroupManager := cgroups.NewCgroupManager(containerID)
 	if err := cgroupManager.Set(res); err != nil { //设置容器限制
 		return fmt.Errorf("set cgroup manager error->%v", err)
 	}

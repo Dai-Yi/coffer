@@ -42,11 +42,10 @@ type Network struct {
 }
 
 type NetworkDriver interface { //网络驱动接口
-	Name() string                                         //驱动名
-	Create(subnet string, name string) (*Network, error)  //创建网络
-	Delete(network Network) error                         //删除网络
-	Connect(network *Network, endpoint *Endpoint) error   //连接容器网络端点到网络
-	Disconnect(network Network, endpoint *Endpoint) error //从网络上移除容器网络端点
+	Name() string                                        //驱动名
+	Create(subnet string, name string) (*Network, error) //创建网络
+	Delete(network Network) error                        //删除网络
+	Connect(network *Network, endpoint *Endpoint) error  //连接容器网络端点到网络
 }
 
 //初始化一个IPAM对象

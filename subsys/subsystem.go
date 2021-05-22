@@ -25,14 +25,6 @@ type Subsystem interface {
 	Remove(path string) error                   //将进程移出CGroup
 }
 
-var (
-	SubsystemsList = []Subsystem{ //子系统列表
-		&CpusetSubsystem{},   //Cpuset子系统
-		&MemorySubsystem{},   //Memory子系统
-		&CpushareSubsystem{}, //Cpushare子系统
-	}
-)
-
 func FindCgroupMountPoint(subsystem string) string {
 	f, err := os.Open("/proc/self/mountinfo") //os.open用于读
 	if err != nil {

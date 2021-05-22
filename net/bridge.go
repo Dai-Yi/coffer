@@ -17,7 +17,7 @@ func (d *BridgeNetworkDriver) Name() string {
 	return "bridge"
 }
 
-func (d *BridgeNetworkDriver) Create(subnet string, name string) (*Network, error) {
+func (bridgeDriver *BridgeNetworkDriver) Create(subnet string, name string) (*Network, error) {
 	//获取网段的字符串中的网关IP地址和网络IP段
 	ip, ipRange, _ := net.ParseCIDR(subnet)
 	ipRange.IP = ip
@@ -25,10 +25,10 @@ func (d *BridgeNetworkDriver) Create(subnet string, name string) (*Network, erro
 	n := &Network{
 		Name:    name,
 		IpRange: ipRange,
-		Driver:  d.Name(),
+		Driver:  bridgeDriver.Name(),
 	}
 	//配置网桥
-	err := d.initBridge(n)
+	err := bridgeDriver.initBridge(n)
 	if err != nil {
 		return nil, fmt.Errorf("init bridge error->%v", err)
 	}
@@ -36,7 +36,7 @@ func (d *BridgeNetworkDriver) Create(subnet string, name string) (*Network, erro
 	return n, err
 }
 
-func (d *BridgeNetworkDriver) Delete(network Network) error {
+func (bridgeDriver *BridgeNetworkDriver) Delete(network Network) error {
 	bridgeName := network.Name
 	br, err := netlink.LinkByName(bridgeName)
 	if err != nil {
@@ -46,7 +46,7 @@ func (d *BridgeNetworkDriver) Delete(network Network) error {
 }
 
 //连接一个网络和网络端点
-func (d *BridgeNetworkDriver) Connect(network *Network, endpoint *Endpoint) error {
+func (bridgeDriver *BridgeNetworkDriver) Connect(network *Network, endpoint *Endpoint) error {
 	//获取网络名,即Bridge接口名
 	bridgeName := network.Name
 	//通过接口名获取到Bridge接口的对象和接口属性
@@ -74,10 +74,6 @@ func (d *BridgeNetworkDriver) Connect(network *Network, endpoint *Endpoint) erro
 	if err = netlink.LinkSetUp(&endpoint.Device); err != nil {
 		return fmt.Errorf("add endpoint device error->%v", err)
 	}
-	return nil
-}
-
-func (d *BridgeNetworkDriver) Disconnect(network Network, endpoint *Endpoint) error {
 	return nil
 }
 
