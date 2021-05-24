@@ -55,6 +55,12 @@ var IpAllocator = &IPAM{
 
 //创建网络
 func CreateNetwork(driver, subnet, name string) error {
+	if driver == "" { //默认驱动为桥
+		driver = "bridge"
+	}
+	if subnet == "" { //默认子网
+		subnet = "192.168.0.0/24"
+	}
 	//ParseCIDR返回IP地址和该IP所在的网络和掩码。
 	//例如，ParseCIDR("192.168.100.1/16")会返回IP地址192.168.100.1和IP网络192.168.0.0/16
 	_, cidr, _ := net.ParseCIDR(subnet)
