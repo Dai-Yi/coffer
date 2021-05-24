@@ -8,7 +8,6 @@ import (
 )
 
 const (
-	ENV_RUN             string = "RUN_BACKGROUND"
 	RUNNING             string = "running"
 	STOP                string = "stopped"
 	Exit                string = "exited"
