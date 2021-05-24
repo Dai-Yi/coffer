@@ -100,14 +100,14 @@ func run(tty bool, volume string, containerName string, imageName string, networ
 	}
 	pipeSend(cmdList, writePipe) //传递命令给容器
 	containerProcess.Wait()      //后台进程等待容器内进程结束
-	if tty {
-		defer cgroupManager.Destroy() //运行完后销毁cgroup manager
-		container.DeleteInfo(containerName)
-		container.DeleteWorkSpace(volume, containerName)
-		utils.Logout("INFO", "Container closed")
+	if !tty {                    //若非前台运行方式
+		utils.Logout("INFO", "Container background running")
 		return nil
 	}
-	utils.Logout("INFO", "Container background running")
+	defer cgroupManager.Destroy() //运行完后销毁cgroup manager
+	container.DeleteInfo(containerName)
+	container.DeleteWorkSpace(volume, containerName)
+	utils.Logout("INFO", "Container closed")
 	return nil
 }
 

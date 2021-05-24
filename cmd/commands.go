@@ -52,8 +52,8 @@ func (*runCommand) execute(nonFlagNum int, argument []string) error {
 			Mems: cpuset_mems,
 		},
 	}
-	env := os.Getenv(container.ENV_RUN)      //获取环境变量判断当前是否为后台进程
-	if !interactive && env != "background" { //如果需要后台运行但当前并非后台进程则转换为后台进程
+	env := os.Getenv(container.ENV_RUN)    //获取环境变量判断当前是否为后台进程
+	if background && env != "background" { //如果需要后台运行但当前并非后台进程则转换为后台进程
 		if err := transform(); err != nil {
 			return fmt.Errorf("transform self into background error->%v", err)
 		}
@@ -61,7 +61,8 @@ func (*runCommand) execute(nonFlagNum int, argument []string) error {
 	} //到这里时，肯定是前台运行或后台守护进程已启动
 	utils.SetProcessName("coffer")
 	//如果已经转换为后台进程或需要交互则正常运行
-	if err := run(interactive, dataPersistence, containerName, imageName, network,
+	//interactive || !background,结果为0后台运行，为1前台运行（默认前台）
+	if err := run(interactive || !background, dataPersistence, containerName, imageName, network,
 		cmdArray, environment.String(), portmapping.String(), resConfig); err != nil {
 		return fmt.Errorf("run image error->%v", err)
 	}
