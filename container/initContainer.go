@@ -30,21 +30,20 @@ func NewProcess(tty bool, volume string, environment []string, containerName str
 		cmd.Stdin = os.Stdin
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-	} else { //后台运行则输出到log文件
-		dirURL := fmt.Sprintf(DefaultInfoLocation, containerName)
-		if !utils.PathExists(dirURL) {
-			if err := os.MkdirAll(dirURL, 0644); err != nil {
-				return nil, nil, fmt.Errorf("container process mkdir error->%v", err)
-			}
+	} //运行过程中产生的日志输出到log文件
+	dirURL := fmt.Sprintf(DefaultInfoLocation, containerName)
+	if !utils.PathExists(dirURL) {
+		if err := os.MkdirAll(dirURL, 0644); err != nil {
+			return nil, nil, fmt.Errorf("container process mkdir error->%v", err)
 		}
-		stdLogFilePath := dirURL + ContainerLogFile
-		stdLogFile, err := os.Create(stdLogFilePath)
-		if err != nil {
-			return nil, nil, fmt.Errorf("container process create log file error->%v", err)
-		}
-		cmd.Stdout = stdLogFile
-		cmd.Stderr = stdLogFile
 	}
+	stdLogFilePath := dirURL + ContainerLogFile
+	stdLogFile, err := os.Create(stdLogFilePath)
+	if err != nil {
+		return nil, nil, fmt.Errorf("container process create log file error->%v", err)
+	}
+	cmd.Stdout = stdLogFile
+	cmd.Stderr = stdLogFile
 	cmd.ExtraFiles = []*os.File{readPipe}          //附加管道文件读取端，使容器能够读取管道传入的命令
 	cmd.Env = append(os.Environ(), environment...) //将环境变量添加上用户自定义环境变量
 	cmd.Dir = fmt.Sprintf(MntURL, containerName)
