@@ -27,7 +27,7 @@ func Logout(level string, information ...interface{}) {
 	// defer cofferLogFile.Close()
 
 	//设置日志同时输出到log文件和终端
-	//writers := []io.Writer{os.Stdout}                 //cofferLogFile,
+	//writers := []io.Writer{cofferLogFile,os.Stdout}
 	//fileAndStdoutWriter := io.MultiWriter(writers...) //省略号是将writers切片打散
 	file, line := printCallerPosition()
 	fileline := fmt.Sprintf("%s:%d", file, line)
