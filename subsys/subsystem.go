@@ -20,9 +20,9 @@ type CpuSet struct {
 }
 type Subsystem interface {
 	Name() string                               //返回subsystem的名字
-	Set(path string, res *ResourceConfig) error //CGroup限制资源
-	Apply(path string, pid int) error           //进程添加到CGroup
-	Remove(path string) error                   //将进程移出CGroup
+	Set(path string, res *ResourceConfig) error //cgroup限制资源
+	Apply(path string, pid int) error           //进程添加到cgroup
+	Remove(path string) error                   //将进程移出cgroup
 }
 
 func FindCgroupMountPoint(subsystem string) string {

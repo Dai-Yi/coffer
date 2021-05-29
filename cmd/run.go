@@ -9,10 +9,13 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"time"
 )
+
+const ENV_RUN_SIGN string = "RUN_BACKGROUND"
 
 func pipeSend(msgList interface{}, writePipe *os.File) {
 	var msgStr string
@@ -120,12 +123,13 @@ func idGenerator() string { //ID生成器
 	temp := string(id)
 	return temp
 }
-func transform() error {
-	containerProcess, err := container.BackgroundProcess()
-	if err != nil {
-		return fmt.Errorf("create background process error->%v", err)
-	}
-	if err := containerProcess.Start(); err != nil {
+func transform() error { //转换为后台运行
+	temp := []string{"coffer"}
+	os.Args = append(temp, os.Args...)
+	cmd := exec.Command("/proc/self/exe", os.Args...) //调用自身来创建子进程,参数不变
+	cmd.Args = os.Args
+	cmd.Env = append(os.Environ(), fmt.Sprintf("%s=background", ENV_RUN_SIGN)) //添加用于判断的环境变量
+	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start background process error->%v", err)
 	}
 	return nil

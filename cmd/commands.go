@@ -52,8 +52,8 @@ func (*runCommand) execute(nonFlagNum int, argument []string) error {
 			Mems: cpuset_mems,
 		},
 	}
-	env := os.Getenv(container.ENV_RUN_SIGN) //获取环境变量判断当前是否为后台进程
-	if background && env != "background" {   //如果需要后台运行但当前并非后台进程则转换为后台进程
+	env := os.Getenv(ENV_RUN_SIGN)         //获取环境变量判断当前是否为后台进程
+	if background && env != "background" { //如果需要后台运行但当前并非后台进程则转换为后台进程
 		if err := transform(); err != nil {
 			return fmt.Errorf("transform self into background error->%v", err)
 		}

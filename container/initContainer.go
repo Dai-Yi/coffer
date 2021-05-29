@@ -11,8 +11,6 @@ import (
 	"syscall"
 )
 
-const ENV_RUN_SIGN string = "RUN_BACKGROUND"
-
 func NewProcess(tty bool, volume string, environment []string, containerName string, imageName string) (*exec.Cmd, *os.File, error) { //创建容器进程
 	readPipe, writePipe, err := os.Pipe() //创建管道用于传递命令给容器
 	if err != nil {                       //管道创建失败
@@ -125,12 +123,4 @@ func changeRoot(root string) error { //更改根目录
 	}
 	// 删除临时文件夹
 	return os.Remove(oldRoot)
-}
-func BackgroundProcess() (*exec.Cmd, error) { //转换为后台运行
-	temp := []string{"coffer"}
-	os.Args = append(temp, os.Args...)
-	cmd := exec.Command("/proc/self/exe", os.Args...) //调用自身来创建子进程,参数不变
-	cmd.Args = os.Args
-	cmd.Env = append(os.Environ(), fmt.Sprintf("%s=background", ENV_RUN_SIGN)) //添加用于判断的环境变量
-	return cmd, nil
 }
