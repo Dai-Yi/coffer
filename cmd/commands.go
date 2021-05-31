@@ -238,7 +238,7 @@ func (*networkCommand) execute(_ int, _ []string) error {
 			if err != nil {
 				return fmt.Errorf("create network error->%v", err)
 			}
-			return nil
+			utils.Logout("INFO", "create network succeeded")
 		} else { //create后没有网络名
 			if !help {
 				fmt.Println("requires at least 1 argument.\nSee 'coffer network create -help'.")
@@ -270,6 +270,7 @@ func (*networkCommand) execute(_ int, _ []string) error {
 			if err := net.DeleteNetwork(flag.Args()[0]); err != nil {
 				return fmt.Errorf("remove network error->%v", err)
 			}
+			utils.Logout("INFO", "remove network succeeded")
 		} else { //remove后没有可执行程序
 			if !help {
 				fmt.Println("requires at least 1 argument.\nSee 'coffer network remove -help'.")

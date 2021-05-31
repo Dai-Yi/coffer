@@ -206,7 +206,6 @@ func Init() error {
 		networks[networkName] = network
 		return nil
 	})
-	utils.Logout("INFO", "initialize network complete")
 	return nil
 }
 
