@@ -40,8 +40,8 @@ func listContainers() ([]*container.ContainerInfo, error) {
 	dirURL := fmt.Sprintf(container.DefaultInfoLocation, "")
 	dirURL = dirURL[:len(dirURL)-1]
 	//读取该目录下所有文件
-	if !utils.PathExists(dirURL) {
-		return nil, fmt.Errorf("no container created")
+	if !utils.PathExists(dirURL) { //没有容器创建
+		return nil, nil
 	}
 	files, err := ioutil.ReadDir(dirURL)
 	if err != nil {
