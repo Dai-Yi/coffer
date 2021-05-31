@@ -3,7 +3,6 @@ package container
 import (
 	"coffer/utils"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -13,7 +12,7 @@ import (
 )
 
 func NewProcess(tty bool, volume string, environment []string, containerName string, imageName string) (*exec.Cmd, *os.File, error) { //创建容器进程
-	var customWriter io.Writer
+	// var customWriter io.Writer
 	readPipe, writePipe, err := os.Pipe() //创建管道用于传递命令给容器
 	if err != nil {                       //管道创建失败
 		return nil, nil, fmt.Errorf("new pipe error->%v", err)
@@ -39,11 +38,11 @@ func NewProcess(tty bool, volume string, environment []string, containerName str
 		return nil, nil, fmt.Errorf("container process create log file error->%v", err)
 	}
 	if tty { //如果要交互，输出定向到系统输出和日志文件
-		writers := []io.Writer{stdLogFile, os.Stdout}
-		customWriter = io.MultiWriter(writers...) //省略号是将writers切片打散
+		// writers := []io.Writer{stdLogFile, os.Stdout}
+		// customWriter = io.MultiWriter(writers...) //省略号是将writers切片打散
 		cmd.Stdin = os.Stdin
-		cmd.Stdout = customWriter
-		cmd.Stderr = os.Stderr
+		cmd.Stdout = os.Stdout //customWriter
+		cmd.Stderr = os.Stderr //customWriter
 	} else { //如果不交互则输出定向到日志文件
 		cmd.Stdout = stdLogFile
 	}

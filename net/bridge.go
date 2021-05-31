@@ -106,12 +106,12 @@ func (d *BridgeNetworkDriver) DeleteBridge(n *Network) error {
 	//网络名即为Linux Bridge设备名
 	bridgeName := n.Name
 	//找到网络对应的设备
-	l, err := netlink.LinkByName(bridgeName)
+	link, err := netlink.LinkByName(bridgeName)
 	if err != nil {
 		return fmt.Errorf("get link with name %s error->%v", bridgeName, err)
 	}
 	//删除网络对应的Bridge设备
-	if err := netlink.LinkDel(l); err != nil {
+	if err := netlink.LinkDel(link); err != nil {
 		return fmt.Errorf("remove bridge %s error->%v", bridgeName, err)
 	}
 	return nil
@@ -152,7 +152,7 @@ func setInterfaceUP(interfaceName string) error {
 
 //设置网络接口的IP地址
 func setInterfaceIP(name string, rawIP string) error {
-	retries := 2
+	retries := 2 //尝试次数
 	var iface netlink.Link
 	var err error
 	for i := 0; i < retries; i++ {
@@ -161,7 +161,7 @@ func setInterfaceIP(name string, rawIP string) error {
 		if err == nil {
 			break
 		}
-		time.Sleep(2 * time.Second)
+		time.Sleep(2 * time.Second) //等待两秒后重新尝试
 	}
 	if err != nil {
 		return fmt.Errorf("abandoning retrieving the new bridge link from netlink, Run \"ip link\" to troubleshoot the error->%v", err)
@@ -178,22 +178,14 @@ func setInterfaceIP(name string, rawIP string) error {
 
 ////通过命令的方式来配置防火墙
 func setupIPTables(bridgeName string, subnet *net.IPNet) error {
-	//从网桥上流入和流出的包都允许转发，-A加入新规则，-i匹配从这块网卡流入的数据，-o匹配从这块网卡流出的数据
-	iptablesCmd1 := "-P FORWARD ACCEPT"
-	cmd1 := exec.Command("iptables", strings.Split(iptablesCmd1, " ")...)
-	//执行iptables命令
-	output1, err1 := cmd1.Output()
-	if err1 != nil {
-		return fmt.Errorf("iptables Output:%v", output1)
-	}
 	//只要是从网桥上出来的包，都对其做源IP的转换。-s源地址,!表示该ip除外，-o指定出口网卡 -j指定动作
-	iptablesCmd2 := fmt.Sprintf("-t nat -A POSTROUTING -s %s ! -o %s -j MASQUERADE",
+	iptablesCmd := fmt.Sprintf("-t nat -A POSTROUTING -s %s ! -o %s -j MASQUERADE",
 		subnet.String(), bridgeName)
-	cmd2 := exec.Command("iptables", strings.Split(iptablesCmd2, " ")...)
+	cmd := exec.Command("iptables", strings.Split(iptablesCmd, " ")...)
 	//执行iptables命令配置SNAT规则
-	output2, err2 := cmd2.Output()
-	if err2 != nil {
-		return fmt.Errorf("iptables Output:%v", output2)
+	output, err := cmd.Output()
+	if err != nil {
+		return fmt.Errorf("iptables Output:%v", output)
 	}
 	return nil
 }
