@@ -54,7 +54,6 @@ func (*runCommand) execute(nonFlagNum int, argument []string) error {
 	}
 	env := os.Getenv(ENV_RUN_SIGN)         //获取环境变量判断当前是否为后台进程
 	if background && env != "background" { //如果需要后台运行但当前并非后台进程则转换为后台进程
-		var readPipe *os.File
 		readPipe, err := transform()
 		if err != nil {
 			return fmt.Errorf("transform self into background error->%v", err)
@@ -64,11 +63,7 @@ func (*runCommand) execute(nonFlagNum int, argument []string) error {
 		if err != nil {
 			return fmt.Errorf("receive message error->%v", err)
 		}
-		if msg == "succeeded" {
-			utils.Logout("INFO", "Container background running")
-		} else if msg == "failed" {
-			utils.Logout("ERROR", "Run background container error")
-		}
+		utils.Logout("INFO", "Run background container", msg)
 		return nil
 	} //到这里时，肯定是前台运行或后台守护进程已启动
 	utils.SetProcessName("coffer")

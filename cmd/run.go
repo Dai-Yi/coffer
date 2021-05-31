@@ -117,10 +117,10 @@ func transform() (*os.File, error) { //转换为后台运行
 	os.Args = append(temp, os.Args...)
 	cmd := exec.Command("/proc/self/exe", os.Args...) //调用自身来创建子进程,参数不变
 	cmd.Args = os.Args
-	cmd.ExtraFiles = []*os.File{readPipe}                                      //附加管道文件读取端，使容器能够读取管道传入的命令
+	cmd.ExtraFiles = []*os.File{writePipe}                                     //附加管道文件读取端，使容器能够读取管道传入的命令
 	cmd.Env = append(os.Environ(), fmt.Sprintf("%s=background", ENV_RUN_SIGN)) //添加用于判断的环境变量
 	if err := cmd.Start(); err != nil {
 		return nil, fmt.Errorf("start background process error->%v", err)
 	}
-	return writePipe, nil
+	return readPipe, nil
 }

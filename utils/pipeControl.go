@@ -42,7 +42,8 @@ func PipeSendToChild(msgList interface{}, writePipe *os.File) {
 
 //父进程接收信息
 func PipeReceiveFromParent(readPipe *os.File) (string, error) {
-	msg, err := ioutil.ReadAll(readPipe)
+	msg := make([]byte, 10)
+	_, err := readPipe.Read(msg)
 	if err != nil {
 		return "", fmt.Errorf("init read pipe error->%v", err)
 	}
@@ -51,9 +52,9 @@ func PipeReceiveFromParent(readPipe *os.File) (string, error) {
 
 //子进程接收信息
 func PipeReceiveFromChild() (string, error) {
-	pipe := os.NewFile(uintptr(3), "pipe") //从文件描述符获取管道
+	readPipe := os.NewFile(uintptr(3), "pipe") //从文件描述符获取管道
 	//用这种方式是因为在创建进程后会初始化新的管道，只有这种方式才能访问父进程的管道
-	msg, err := ioutil.ReadAll(pipe)
+	msg, err := ioutil.ReadAll(readPipe)
 	if err != nil {
 		return "", fmt.Errorf("init read pipe error->%v", err)
 	}
