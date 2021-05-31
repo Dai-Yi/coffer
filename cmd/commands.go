@@ -54,8 +54,20 @@ func (*runCommand) execute(nonFlagNum int, argument []string) error {
 	}
 	env := os.Getenv(ENV_RUN_SIGN)         //获取环境变量判断当前是否为后台进程
 	if background && env != "background" { //如果需要后台运行但当前并非后台进程则转换为后台进程
-		if err := transform(); err != nil {
+		var readPipe *os.File
+		readPipe, err := transform()
+		if err != nil {
 			return fmt.Errorf("transform self into background error->%v", err)
+		}
+		//生成子进程后,父进程开始监听子进程中容器创建是否成功
+		msg, err := utils.PipeReceiveFromParent(readPipe)
+		if err != nil {
+			return fmt.Errorf("receive message error->%v", err)
+		}
+		if msg == "succeeded" {
+			utils.Logout("INFO", "Container background running")
+		} else if msg == "failed" {
+			utils.Logout("ERROR", "Run background container error")
 		}
 		return nil
 	} //到这里时，肯定是前台运行或后台守护进程已启动
@@ -64,8 +76,10 @@ func (*runCommand) execute(nonFlagNum int, argument []string) error {
 	//interactive || !background,结果为0后台运行，为1前台运行（默认前台）
 	if err := run(interactive || !background, dataPersistence, containerName, imageName, network,
 		cmdArray, environment.String(), portmapping.String(), resConfig); err != nil {
+		utils.PipeSendToParent("failed") //若失败则告诉父进程失败
 		return fmt.Errorf("run image error->%v", err)
 	}
+	utils.PipeSendToParent("succeeded") //若成功则告诉父进程成功
 	return nil
 }
 

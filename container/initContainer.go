@@ -3,7 +3,6 @@ package container
 import (
 	"coffer/utils"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -11,7 +10,8 @@ import (
 	"syscall"
 )
 
-func NewProcess(tty bool, volume string, environment []string, containerName string, imageName string) (*exec.Cmd, *os.File, error) { //创建容器进程
+func NewProcess(tty bool, volume string, environment []string,
+	containerName string, imageName string) (*exec.Cmd, *os.File, error) { //创建容器进程
 	// var customWriter io.Writer
 	readPipe, writePipe, err := os.Pipe() //创建管道用于传递命令给容器
 	if err != nil {                       //管道创建失败
@@ -55,16 +55,10 @@ func NewProcess(tty bool, volume string, environment []string, containerName str
 	return cmd, writePipe, nil
 }
 
-func PipeReceive() (string, error) {
-	pipe := os.NewFile(uintptr(3), "pipe") //从文件描述符获取管道
-	msg, err := ioutil.ReadAll(pipe)
-	if err != nil {
-		return "", fmt.Errorf("init read pipe error->%v", err)
-	}
-	return string(msg), nil
-}
+//从管道获取消息
+
 func InitializeContainer() error { //容器内部初始化
-	tempList, err := PipeReceive() //从管道读取到命令
+	tempList, err := utils.PipeReceiveFromChild() //从管道读取到命令
 	if err != nil {
 		return fmt.Errorf("receive command error->%v", err)
 	}

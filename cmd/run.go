@@ -17,20 +17,6 @@ import (
 
 const ENV_RUN_SIGN string = "RUN_BACKGROUND"
 
-func pipeSend(msgList interface{}, writePipe *os.File) {
-	var msgStr string
-	val1, ok := msgList.([]string) //断言是否为[]string类型
-	if ok {                        //如果是则转换为string类型
-		msgStr = strings.Join(val1, " ")
-	} else { //如果不是[]string则为string类型
-		val2 := msgList.(string) //断言是否为string类型
-		msgStr = val2
-	}
-	utils.Lock(writePipe)         //加锁
-	writePipe.WriteString(msgStr) //命令写入管道
-	utils.UnLock(writePipe)       //解锁
-	writePipe.Close()             //关闭写入端
-}
 func duplicateQuery(id string, Name string) (string, error) {
 	var newID string
 	containers, _ := listContainers()
@@ -101,10 +87,9 @@ func run(tty bool, volume string, containerName string, imageName string, networ
 			return fmt.Errorf("connect network error->%v", err)
 		}
 	}
-	pipeSend(cmdList, writePipe) //传递命令给容器
-	containerProcess.Wait()      //后台进程等待容器内进程结束
-	if !tty {                    //若非前台运行方式
-		utils.Logout("INFO", "Container background running")
+	utils.PipeSendToChild(cmdList, writePipe) //传递命令给容器
+	containerProcess.Wait()                   //后台进程等待容器内进程结束
+	if !tty {                                 //若非前台运行方式
 		return nil
 	}
 	defer cgroupManager.Destroy() //运行完后销毁cgroup manager
@@ -123,14 +108,19 @@ func idGenerator() string { //ID生成器
 	temp := string(id)
 	return temp
 }
-func transform() error { //转换为后台运行
+func transform() (*os.File, error) { //转换为后台运行
+	readPipe, writePipe, err := os.Pipe() //创建管道用于传递容器创建结果给父进程
+	if err != nil {                       //管道创建失败
+		return nil, fmt.Errorf("new pipe error->%v", err)
+	}
 	temp := []string{"coffer"}
 	os.Args = append(temp, os.Args...)
 	cmd := exec.Command("/proc/self/exe", os.Args...) //调用自身来创建子进程,参数不变
 	cmd.Args = os.Args
+	cmd.ExtraFiles = []*os.File{readPipe}                                      //附加管道文件读取端，使容器能够读取管道传入的命令
 	cmd.Env = append(os.Environ(), fmt.Sprintf("%s=background", ENV_RUN_SIGN)) //添加用于判断的环境变量
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("start background process error->%v", err)
+		return nil, fmt.Errorf("start background process error->%v", err)
 	}
-	return nil
+	return writePipe, nil
 }
