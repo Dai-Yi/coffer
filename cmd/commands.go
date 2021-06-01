@@ -74,7 +74,6 @@ func (*runCommand) execute(nonFlagNum int, argument []string) error {
 		utils.PipeSendToParent("failed") //若失败则告诉父进程失败
 		return fmt.Errorf("run image error->%v", err)
 	}
-	utils.PipeSendToParent("succeeded") //若成功则告诉父进程成功
 	return nil
 }
 
@@ -287,6 +286,8 @@ func (*networkCommand) execute(_ int, _ []string) error {
 			}
 			flag.Usage = networkRemoveUsage
 		}
+	default:
+		return fmt.Errorf("invalid command")
 	}
 	if help {
 		flag.Usage()

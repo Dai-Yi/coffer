@@ -87,6 +87,7 @@ func run(tty bool, volume string, containerName string, imageName string, networ
 			return fmt.Errorf("connect network error->%v", err)
 		}
 	}
+	utils.PipeSendToParent("succeeded")       //若成功则告诉父进程成功
 	utils.PipeSendToChild(cmdList, writePipe) //传递命令给容器
 	containerProcess.Wait()                   //后台进程等待容器内进程结束
 	if !tty {                                 //若非前台运行方式
