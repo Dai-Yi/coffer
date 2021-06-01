@@ -70,15 +70,19 @@ func run(tty bool, volume string, containerName string, imageName string, networ
 		PortMapping: port,
 	}
 	if err := container.StoreInfo(containerInfo); err != nil { //储存容器信息
+		//若储存失败则删除已创建目录和信息
+		container.DeleteInfo(containerName)
 		return fmt.Errorf("store container information error->%v", err)
 	}
 	//创建cgroup manager，并通过set和apply设置资源限制
 	cgroupManager := cgroups.NewCgroupManager(containerID)
 	if err := cgroupManager.Set(res); err != nil { //设置容器限制
+		cgroupManager.Destroy() //若失败则删除已创建目录
 		return fmt.Errorf("set cgroup manager error->%v", err)
 	}
 	//将容器进程加入到各个子系统
 	if err := cgroupManager.Apply(containerProcess.Process.Pid); err != nil {
+		cgroupManager.Destroy() //若失败则删除已创建目录
 		return fmt.Errorf("apply cgroup manager error->%v", err)
 	}
 	if network != "" { //配置网络信息

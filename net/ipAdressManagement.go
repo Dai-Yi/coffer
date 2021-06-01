@@ -107,8 +107,14 @@ func (ipam *IPAM) Allocate(subnet *net.IPNet) (ip net.IP, err error) {
 		}
 	}
 	//将分配结果保存到文件中
-	ipam.store()
-	return
+	if err := ipam.store(); err != nil {
+		ipamConfigFileDir, _ := path.Split(ipam.SubnetAllocatorPath) //分隔路径
+		if utils.PathExists(ipamConfigFileDir) {
+			os.RemoveAll(ipamConfigFileDir) //保存失败则删除已创建目录
+		}
+		return nil, fmt.Errorf("store ipam error->%v", err)
+	}
+	return ip, nil
 }
 
 //从指定网段中释放IP地址
@@ -134,6 +140,12 @@ func (ipam *IPAM) Release(subnet *net.IPNet, ipaddr *net.IP) error {
 	ipalloc[c] = '0'
 	(*ipam.Subnets)[subnet.String()] = string(ipalloc)
 	//保存释放掉IP后的网段IP分配信息
-	ipam.store()
+	if err := ipam.store(); err != nil {
+		ipamConfigFileDir, _ := path.Split(ipam.SubnetAllocatorPath) //分隔路径
+		if utils.PathExists(ipamConfigFileDir) {
+			os.RemoveAll(ipamConfigFileDir) //保存失败则删除已创建目录
+		}
+		return fmt.Errorf("store ipam error->%v", err)
+	}
 	return nil
 }

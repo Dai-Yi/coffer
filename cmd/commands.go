@@ -23,7 +23,7 @@ Run a command in a new container.
 
 Options:
 	-i			Make the app interactive:attach STDIN,STDOUT,STDERR
-	-p			Bind mount a data volume(Data Persistence)
+	-p			Bind mount a data volume(Data Persistence),<host dir>:<container dir>
 	-b			Run container in background(CANNOT be used with -i at the same time)
 	-cpushare		CPU shares (relative weight)
 	-memory			Memory limit
@@ -71,7 +71,9 @@ func (*runCommand) execute(nonFlagNum int, argument []string) error {
 	//interactive || !background,结果为0后台运行，为1前台运行（默认前台）
 	if err := run(interactive || !background, dataPersistence, containerName, imageName, network,
 		cmdArray, environment.String(), portmapping.String(), resConfig); err != nil {
-		utils.PipeSendToParent("failed") //若失败则告诉父进程失败
+		utils.PipeSendToParent("failed")                          //若失败则告诉父进程失败
+		container.DeleteInfo(containerName)                       //若失败则删除容器信息
+		container.DeleteWorkSpace(dataPersistence, containerName) //若失败则删除工作区
 		return fmt.Errorf("run image error->%v", err)
 	}
 	return nil

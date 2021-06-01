@@ -50,6 +50,8 @@ func NewProcess(tty bool, volume string, environment []string,
 	cmd.Env = append(os.Environ(), environment...) //将环境变量添加上用户自定义环境变量
 	cmd.Dir = fmt.Sprintf(MntURL, containerName)
 	if err := NewWorkSpace(containerName, imageName, volume); err != nil {
+		//若创建过程中出现错误则删除已创建的工作区
+		DeleteWorkSpace(volume, containerName)
 		return nil, nil, fmt.Errorf("create new work space error->%v", err)
 	}
 	return cmd, writePipe, nil
@@ -87,6 +89,8 @@ func setMount() error {
 	}
 	utils.Logout("INFO", "Current location:", pwd)
 	if err = changeRoot(pwd); err != nil {
+		oldRoot := filepath.Join(pwd, ".pivot_root") //存储old_root的目录
+		os.Remove(oldRoot)                           //若失败则删除已创建的
 		return fmt.Errorf("change root mount error->%v", err)
 	}
 	//挂载proc文件系统
