@@ -77,9 +77,6 @@ func CreateNetwork(driver, subnet, name string) error {
 	}
 	//保存网络信息
 	if err := network.store(defaultNetworkPath); err != nil {
-		if utils.PathExists(defaultNetworkPath) {
-			os.RemoveAll(defaultNetworkPath) //若保存失败则删除已创建目录
-		}
 		return fmt.Errorf("store network error->%v", err)
 	}
 	return nil
