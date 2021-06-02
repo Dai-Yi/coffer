@@ -25,26 +25,25 @@ func NewProcess(tty bool, volume string, environment []string,
 			syscall.CLONE_NEWNET |
 			syscall.CLONE_NEWIPC,
 	}
-	//运行过程中产生的日志输出到log文件
-	dirURL := fmt.Sprintf(DefaultInfoLocation, containerName)
-	if !utils.PathExists(dirURL) {
-		if err := os.MkdirAll(dirURL, 0644); err != nil {
-			return nil, nil, fmt.Errorf("container process mkdir error->%v", err)
-		}
-	}
-	stdLogFilePath := dirURL + ContainerLogFile
-	stdLogFile, err := os.Create(stdLogFilePath)
-	if err != nil {
-		return nil, nil, fmt.Errorf("container process create log file error->%v", err)
-	}
-	if tty { //如果要交互，输出定向到系统输出和日志文件
-		// writers := []io.Writer{stdLogFile, os.Stdout}
-		// customWriter = io.MultiWriter(writers...) //省略号是将writers切片打散
+	if tty { //如果要交互，输出定向到系统输出
 		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout //customWriter
-		cmd.Stderr = os.Stderr //customWriter
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 	} else { //如果不交互则输出定向到日志文件
+		//运行过程中产生的日志输出到log文件
+		dirURL := fmt.Sprintf(DefaultInfoLocation, containerName)
+		if !utils.PathExists(dirURL) {
+			if err := os.MkdirAll(dirURL, 0644); err != nil {
+				return nil, nil, fmt.Errorf("container process mkdir error->%v", err)
+			}
+		}
+		stdLogFilePath := dirURL + ContainerLogFile
+		stdLogFile, err := os.Create(stdLogFilePath)
+		if err != nil {
+			return nil, nil, fmt.Errorf("container process create log file error->%v", err)
+		}
 		cmd.Stdout = stdLogFile
+		cmd.Stderr = stdLogFile
 	}
 	cmd.ExtraFiles = []*os.File{readPipe}          //附加管道文件读取端，使容器能够读取管道传入的命令
 	cmd.Env = append(os.Environ(), environment...) //将环境变量添加上用户自定义环境变量
@@ -56,8 +55,6 @@ func NewProcess(tty bool, volume string, environment []string,
 	}
 	return cmd, writePipe, nil
 }
-
-//从管道获取消息
 
 func InitializeContainer() error { //容器内部初始化
 	tempList, err := utils.PipeReceiveFromChild() //从管道读取到命令
