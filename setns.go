@@ -21,7 +21,7 @@ __attribute__((constructor)) void enterNamespace(void) {
 	if (cofferPID) {
 		//fprintf(stdout, "got cofferPID=%s\n", cofferPID);
 	} else {//若没有发现指定pid则退出
-		//fprintf(stdout, "missing cofferPID env skip nsenter");
+		fprintf(stdout, "missing cofferPID env skip nsenter");
 		return;
 	}
 	char *cofferCMD;
@@ -30,7 +30,7 @@ __attribute__((constructor)) void enterNamespace(void) {
 	if (cofferCMD) {
 		//fprintf(stdout, "got cofferCMD=%s\n", cofferCMD);
 	} else {//若没有发现指定命令则退出
-		//fprintf(stdout, "missing cofferCMD env skip nsenter");
+		fprintf(stdout, "missing cofferCMD env skip nsenter");
 		return;
 	}
 	int i;

@@ -42,6 +42,9 @@ func execContainer(containerName string, comArray []string) error {
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("exec container %s error->%v", containerName, err)
 	}
+	container.DeleteInfo(containerName)
+	container.DeleteWorkSpace("", containerName)
+	utils.Logout("DEBUG", "Container closed")
 	return nil
 }
 
