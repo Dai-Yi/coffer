@@ -9,7 +9,7 @@ import (
 
 func commitContainer(containerName string, imageName string) error {
 	mntURL := fmt.Sprintf(container.MntURL, containerName)
-	if !utils.PathExists(containerName) {
+	if !utils.PathExists(mntURL) {
 		return fmt.Errorf("container named %s not exist", containerName)
 	}
 	imageTar := container.RootURL + imageName + ".tar"

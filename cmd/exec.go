@@ -49,6 +49,9 @@ func execContainer(containerName string, comArray []string) error {
 func getContainerPidByName(containerName string) (string, error) {
 	//先拼接出存储容器信息的路径
 	dirURL := fmt.Sprintf(container.DefaultInfoLocation, containerName)
+	if !utils.PathExists(dirURL) {
+		return "", fmt.Errorf("container named %s not exist", containerName)
+	}
 	configFilePath := dirURL + container.ConfigFile
 	//读取该路径下的文件内容
 	contentBytes, err := ioutil.ReadFile(configFilePath)
