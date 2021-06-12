@@ -1,63 +1,43 @@
 # Coffer
-### 毕业设计 相关笔记
-## 隔离Namespace相关： 
-### CLONE_NEWUTS (UTS Namespace)：隔离hostname 和NIS domain name。  
-hostname：主机名，在局域网中标记主机。  
-NIS domain name：NIS域名，在NIS服务器中标记主机。  
-* 验证方法：  
-    1. 修改hostname：hostname -b xxx  
-    2. 在新终端中查看hostname  
-### CLONE_NEWPID (PID Namespace)：隔离进程ID。  
-* 验证方法：  
-    1. 查看进程树：pstree -pl  
-    2. 在新终端中查看进程真实PID：pstree -pl  
-### CLONE_NEWIPC (IPC Namespace)：隔离进程间通信，System V IPC和POSIX message queues。  
-System V IPC 、POSIX message queues：IPC包含共享内存、信号量和消息队列，用于进程间通信。每个IPC名称空间都有其自己的一组System V IPC标识符和它自己的POSIX 消息队列文件系统。  
-* 验证方法：  
-    1. 查看现有的IPC消息序列：ipcs -q  
-    2. 创建一个IPC消息序列：ipcmk -Q  
-    3. 再查看当前IPC消息序列：ipcs -q  
-    4. 在新终端中查看IPC消息序列：ipcs -q  
-### CLONE_NEWNS (Mount Namespace)：隔离进程挂载点。  
-* 验证方法：  
-    1. 查看/proc：ls /proc  
-    2. 在新终端中查看/porc：ls /proc  
-    3. 查看系统进程：ps -ef  
-    4. 在新终端中查看系统进程：ps -ef  
-### CLONE_NEWNET (Network Namespace)：隔离网络设备。  
-* 验证方法：  
-    1. 查看网络设备情况：ifconfig  
-    2. 在新终端查看网络设备状况：ifconfig  
-## 限制资源Cgroups相关：  
-### 限制内存资源（待更新）  
-* 验证方法：  
-    1. 使用stress程序占用200m内存：stress --vm-bytes 200m --vm-keep -m 1  
-    2. 在新终端中查看当前系统资源占用情况：top  
-    3. 关闭top终端  
-    4. 用容器中打开stress程序，同时容器限制100m内存：coffer run -s -memory 100m stress --vm-bytes 200m --vm-keep -m -1  
-    5. 在新终端中查看此时系统资源占用情况：top  
-## 数据卷相关：持久化容器数据  
-* 验证方法：  
-    1. 查看root目录下文件：ls /root  
-    2. 启动容器，使宿主机某目录作为数据卷使容器数据持久化：coffer run -s -d /root/volume:/containerVolume sh  
-    3. 查看容器目录下文件：ls   
-    4. containerVolume目录下创建HelloWorld文件：touch HelloWorld.txt  
-    5. 在新终端中查看root目录下文件：ls /root  
-    6. 查看volume目录下文件：ls /root/volume  
-## /proc相关：
-### /proc/[pid]/mountinfo：
-文件，挂载信息，格式为36 35 98:0 /mnt1 /mnt2 rw,noatime master:1 - ext3 /dev/root rw,errors=continue，以空格作为分隔符，从左到右各字段的意思分别是唯一挂载ID、父挂载ID、文件系统的设备主从号码、文件系统中挂载的根节点、相对于进程根节点的挂载点、挂载权限等挂载配置、可选配置、短横线表示前面可选配置的结束、文件系统类型、文件系统特有的挂载源或者为none、额外配置。
-### /proc/self：
-目录，链接到了当前进程所在的目录  
-### /proc/[pid]/cgroup：
-文件，进程所属的控制组，格式为冒号分隔的三个字段，分别是结构ID、子系统、控制组，需配置CONFIG_CGROUPS。  
-## Mount相关：
-* MS_PRIVATE：挂载点设为私有。  
-* MS_REC：递归更改子树中安装的传播类型。 
-* MS_NOEXEC：本文件系统不允许运行其他程序。  
-* MS_NOSUID：本系统运行时不允许更改用户ID和组ID。  
-* MS_NODEV：不允许访问此文件系统上的设备（特殊文件）。  
-* MS_BIND：绑定安装，绑定安装使文件或目录子树在单个目录层次结构的另一点可见。  
-## Umount相关：
-* MNT_DETACH：使挂载点不可用于新访问，立即相关文件系统彼此以及与挂载表断开连接。  
+开发及使用说明
+## 开发环境：
+* Golang版本：1.16.2 linux/amd64
+* Kernel版本：Linux 5.4.0-73-generic
+* Ubuntu版本：Ubuntu 20.04.2 LTS
+## 开发方式：
+* VMware虚拟机运行Ubuntu-Server 20.04
+* VS Code在Win10环境下通过SSH连接虚拟机进行远程调试
+## 使用说明：
+* 使用前请先将coffer可执行文件路径添加到环境变量，以下说明默认已执行该操作。
+
+* 查看使用说明（应用中为英文版）：coffer -h或coffer -help  
+* 查看版本信息：coffer -v或coffer -version
+* 运行容器：coffer run <镜像名> <命令>   
+其中镜像名和命令缺一不可，镜像名为可执行文件所在文件夹名称，命令为可执行文件，命令后可添加参数，如coffer run busybox sh    
+  运行容器包含众多参数：   
+  1. 指定容器网络：-net <网络名>
+  2. 挂载数据卷：-p <宿主机目录>:<容器目录>
+  3. 指定环境变量：-e <环境变量>    
+  可多次调用该参数赖指定复数的环境变量。
+  4. 指定容器名称：-name <容器名>
+  5. 容器后台运行：-b    
+  后台运行的容器将不会有任何输出到命令行界面，通过log命令查看容器日志
+  6. 限制容器内存使用：-memory <限制数值>
+  7. 指定网络端口映射：-port <宿主机端口>:<容器端口>
+* 进入后台运行容器：coffer exec <容器名> <镜像名> <命令>    
+该后台运行容器必须运行长时间运行程序
+* 查看容器运行状态：coffer ps
+* 查看容器日志：coffer log <容器名>
+* 封装容器镜像：coffer commit <容器名> <镜像名>    
+封装运行中的容器为镜像
+* 停止指定容器：
+coffer stop <容器名>
+* 删除指定容器：
+coffer rm <容器名>
+* 容器网络管理：coffer network <子命令>    
+  容器管理有若干子命令：     
+  1. 创建网络：coffer network create -driver <驱动名> -subnet <子网地址> <网络名>    
+  可指定网络驱动（目前只有网桥）和子网地址（默认 192.168.0.0/24）
+  2. 显示网络列表：coffer network list
+  3. 删除网络：coffer network remove <网络名>
 
